@@ -32,3 +32,50 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Verify formatting and unused imports
+        run: ./gradlew --no-daemon ktlintMainSourceSetCheck ktlintTestSourceSetCheck
+
+      - name: Run detekt static analysis
+        run: ./gradlew --no-daemon detekt
+
+      - name: Run tests with coverage
+        run: ./gradlew --no-daemon test jacocoTestReport
+
+      - name: Generate coverage badges
+        if: github.event_name == 'pull_request' && github.event.pull_request.merged != true
+        uses: cicirello/jacoco-badge-generator@v2
+        with:
+          jacoco-csv-file: build/reports/jacoco/test/jacocoTestReport.csv
+          badges-directory: badges
+          generate-branches-badge: true
+          generate-coverage-badge: true
+          on-missing-report: fail
+
+      - name: Commit and push badges
+        if: github.event_name == 'pull_request' && github.event.pull_request.merged != true
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'ci: update jacoco coverage badges [skip ci]'
+          file_pattern: badges/*.svg
+          branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+
+      - name: Add coverage to PR summary
+        if: always()
+        uses: madrapps/jacoco-report@v1.7.1
+        with:
+          paths: ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
+          token: ${{ github.token }}
+          min-coverage-overall: 90
+          min-coverage-changed-files: 90
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: build/reports/jacoco/test/html/
+          retention-days: 1
