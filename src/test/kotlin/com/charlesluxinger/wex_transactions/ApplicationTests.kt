@@ -7,5 +7,6 @@ import org.springframework.boot.test.context.SpringBootTest
 class ApplicationTests {
     @Test
     fun contextLoads() {
+        // Verifies that Spring context loads without errors
     }
 }
