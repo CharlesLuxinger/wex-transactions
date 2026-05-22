@@ -1,6 +1,5 @@
 package com.charlesluxinger.wex_transactions.architecture
 
-import com.tngtech.archunit.core.importer.ClassFileImporter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -23,18 +22,20 @@ class ArchitectureScaffoldTest : ArchitectureTest() {
         assertThat(DOMAIN_PACKAGE).isEqualTo("com.charlesluxinger.wex_transactions.domain..")
         assertThat(APPLICATION_PACKAGE).isEqualTo("com.charlesluxinger.wex_transactions.application..")
         assertThat(INFRA_PACKAGE).isEqualTo("com.charlesluxinger.wex_transactions.infra..")
-        assertThat(INFRA_CLIENT_PACKAGE).isEqualTo("com.charlesluxinger.wex_transactions.infra..client..")
+        assertThat(INFRA_CLIENT_PACKAGE).isEqualTo("com.charlesluxinger.wex_transactions.infra.client..")
     }
 
     @Test
     fun `importClasses returns JavaClasses without throwing`() {
         val classes = importClasses()
         assertThat(classes).isNotNull
+        assertThat(classes).isNotEmpty
     }
 
     @Test
-    fun `importing base package does not fail`() {
-        val classes = ClassFileImporter().importPackages(BASE_PACKAGE)
-        assertThat(classes).isNotNull
+    fun `importing base package excludes architecture test classes`() {
+        val classes = importClasses()
+        assertThat(classes.map { it.packageName })
+            .noneMatch { packageName -> packageName.contains(".architecture") }
     }
 }

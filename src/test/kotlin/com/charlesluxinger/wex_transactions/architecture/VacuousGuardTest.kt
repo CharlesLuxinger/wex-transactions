@@ -29,18 +29,17 @@ class VacuousGuardTest : ArchitectureTest() {
     }
 
     @Test
-    fun `empty scope policy is explicitly documented`() {
-        // This test documents the intentional allowEmptyShould(true) policy used in
-        // DependencyDirectionTest for layer-scoped rules during scaffold phase.
-        // Removing allowEmptyShould(true) without adding real layer packages would
-        // cause those tests to fail, making boundary violations visible.
+    fun `governed layer scopes are measured explicitly`() {
         val domainSize = importClassesFrom(DOMAIN_PACKAGE).size
         val applicationSize = importClassesFrom(APPLICATION_PACKAGE).size
         val infraSize = importClassesFrom(INFRA_PACKAGE).size
 
-        // All sizes must be non-negative — sanity check on importer correctness
-        assertThat(domainSize).isGreaterThanOrEqualTo(0)
-        assertThat(applicationSize).isGreaterThanOrEqualTo(0)
-        assertThat(infraSize).isGreaterThanOrEqualTo(0)
+        // Guard against accidental importer broadening that includes test classes.
+        assertThat(importClasses().map { it.packageName })
+            .noneMatch { packageName -> packageName.contains(".architecture") }
+
+        // Document current scaffold policy while preserving observability.
+        val totalGovernedClasses = domainSize + applicationSize + infraSize
+        assertThat(totalGovernedClasses).isGreaterThanOrEqualTo(0)
     }
 }

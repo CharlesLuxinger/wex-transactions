@@ -39,6 +39,14 @@ out/
 ### Kotlin ###
 .kotlin
 
+# Logs / temp
+.sisyphus/ralph-loop.local.md
+.sisyphus/evidence
+**/*.log
+**/*.tmp
+**/*.temp
+**/**/boulder.json
+
 # Added by code-review-graph
 graphify-out/cache/
 .code-review-graph/

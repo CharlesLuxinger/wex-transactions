@@ -2,6 +2,7 @@ package com.charlesluxinger.wex_transactions.architecture
 
 import com.tngtech.archunit.core.domain.JavaClasses
 import com.tngtech.archunit.core.importer.ClassFileImporter
+import com.tngtech.archunit.core.importer.ImportOption
 
 /**
  * Base class for architecture tests providing centralized import and package constants.
@@ -22,7 +23,7 @@ abstract class ArchitectureTest {
         const val DOMAIN_PACKAGE = "$BASE_PACKAGE.domain.."
         const val APPLICATION_PACKAGE = "$BASE_PACKAGE.application.."
         const val INFRA_PACKAGE = "$BASE_PACKAGE.infra.."
-        const val INFRA_CLIENT_PACKAGE = "${INFRA_PACKAGE}client.."
+        const val INFRA_CLIENT_PACKAGE = "$BASE_PACKAGE.infra.client.."
     }
 
     /**
@@ -33,7 +34,10 @@ abstract class ArchitectureTest {
      *
      * @return JavaClasses resolved from production packages only
      */
-    protected fun importClasses(): JavaClasses = ClassFileImporter().importPackages(BASE_PACKAGE)
+    protected fun importClasses(): JavaClasses =
+        ClassFileImporter()
+            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+            .importPackages(BASE_PACKAGE)
 
     /**
      * Imports only classes from a specific package and its subpackages.
@@ -41,5 +45,8 @@ abstract class ArchitectureTest {
      * @param packageName the root package to import
      * @return JavaClasses from the specified package
      */
-    protected fun importClassesFrom(packageName: String): JavaClasses = ClassFileImporter().importPackages(packageName)
+    protected fun importClassesFrom(packageName: String): JavaClasses =
+        ClassFileImporter()
+            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+            .importPackages(packageName)
 }

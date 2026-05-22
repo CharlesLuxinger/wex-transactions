@@ -18,7 +18,6 @@ class DependencyDirectionTest : ArchitectureTest() {
     @Test
     fun `domain must not depend on application`() {
         val domainClasses = importClassesFrom(DOMAIN_PACKAGE)
-        if (domainClasses.isEmpty()) return
         val rule: ArchRule =
             noClasses()
                 .that()
@@ -33,7 +32,6 @@ class DependencyDirectionTest : ArchitectureTest() {
     @Test
     fun `domain must not depend on infrastructure`() {
         val domainClasses = importClassesFrom(DOMAIN_PACKAGE)
-        if (domainClasses.isEmpty()) return
         val rule: ArchRule =
             noClasses()
                 .that()
@@ -48,7 +46,6 @@ class DependencyDirectionTest : ArchitectureTest() {
     @Test
     fun `application must not depend on infrastructure`() {
         val appClasses = importClassesFrom(APPLICATION_PACKAGE)
-        if (appClasses.isEmpty()) return
         val rule: ArchRule =
             noClasses()
                 .that()

@@ -16,20 +16,14 @@ class ControllerBoundaryTest : ArchitectureTest() {
     @Test
     fun `controllers must not depend on repositories`() {
         val classes = importClasses()
-        val infraClientExists =
-            classes.any {
-                it.name.startsWith(
-                    "${BASE_PACKAGE}.infra",
-                ) &&
-                    it.name.contains(".client")
-            }
+        val infraClientExists = classes.any { it.packageName.contains(".infra.client.") }
         if (!infraClientExists) {
             return
         }
         val rule =
             noClasses()
                 .that()
-                .resideInAnyPackage("$INFRA_CLIENT_PACKAGE..")
+                .resideInAnyPackage(INFRA_CLIENT_PACKAGE)
                 .should()
                 .dependOnClassesThat()
                 .resideInAnyPackage("..repository..", "..Repository..")
@@ -40,20 +34,14 @@ class ControllerBoundaryTest : ArchitectureTest() {
     @Test
     fun `controllers must not depend on adapters`() {
         val classes = importClasses()
-        val infraClientExists =
-            classes.any {
-                it.name.startsWith(
-                    "${BASE_PACKAGE}.infra",
-                ) &&
-                    it.name.contains(".client")
-            }
+        val infraClientExists = classes.any { it.packageName.contains(".infra.client.") }
         if (!infraClientExists) {
             return
         }
         val rule =
             noClasses()
                 .that()
-                .resideInAnyPackage("$INFRA_CLIENT_PACKAGE..")
+                .resideInAnyPackage(INFRA_CLIENT_PACKAGE)
                 .should()
                 .dependOnClassesThat()
                 .resideInAnyPackage("..adapter..", "..Adapter..")
