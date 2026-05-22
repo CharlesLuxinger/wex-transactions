@@ -129,10 +129,6 @@ Skills live in `.agents/skills/<name>/SKILL.md`. The `clean-ddd-hexagonal` skill
 
 Triggers on PR and push to `main`. Steps: `ktlintMainSourceSetCheck ktlintTestSourceSetCheck` → `detekt` → `test jacocoTestReport`. Badges generate on `pull_request` and commit to the PR branch. Coverage posted as PR summary comment.
 
-## Git Workflow
-- Before starting any new implementation from a plan or task, fetch remote `main` and create a fresh branch from `origin/main`.
-- Pull request description should be based on the implemented plan file.
-
 ## graphify
 
 This project has a knowledge graph at `graphify-out/` with god nodes, community structure, and cross-file relationships.
@@ -159,8 +155,3 @@ This project has a knowledge graph at `graphify-out/` with god nodes, community 
 ## SOURCE OF TRUTH
 
 When documentation conflicts with executable config, follow the executable config. CI workflow (`.github/workflows/ci.yml`), build config (`build.gradle.kts`), and formatter config (`.editorconfig`) are authoritative — they reflect runtime truth.
-
-## Mandatory Agent Rules
-- File: `.agents/RULES.md`.
-- Status: mandatory for all agents.
-- Apply all constraints in that file.
