@@ -22,6 +22,7 @@ class PurchaseTest {
         val purchase = samplePurchase()
 
         assertEquals(1L, purchase.id)
+        assertEquals("Fuel purchase", purchase.description)
         assertEquals(BigDecimal("100.00"), purchase.transactionAmount)
         assertEquals(TargetCurrency("USD"), purchase.transactionCurrency)
         assertEquals(TargetCurrency("BRL"), purchase.targetCurrency)
@@ -175,8 +176,29 @@ class PurchaseTest {
         assertEquals("Converted amount must be zero or positive", error.message)
     }
 
+    @Test
+    fun `should reject blank description`() {
+        val error =
+            assertFailsWith<IllegalArgumentException> {
+                samplePurchase(description = "   ")
+            }
+
+        assertEquals("Description must not be blank", error.message)
+    }
+
+    @Test
+    fun `should reject too long description`() {
+        val error =
+            assertFailsWith<IllegalArgumentException> {
+                samplePurchase(description = "a".repeat(51))
+            }
+
+        assertEquals("Description must have at most 50 characters", error.message)
+    }
+
     private fun samplePurchase(
         id: Long = 1L,
+        description: String = "Fuel purchase",
         transactionAmount: BigDecimal = BigDecimal("100.00"),
         transactionCurrency: TargetCurrency = TargetCurrency("USD"),
         transactionDate: TransactionDate = TransactionDate(LocalDateTime.of(2026, 1, 1, 10, 30, 45)),
@@ -193,6 +215,7 @@ class PurchaseTest {
     ): Purchase =
         Purchase(
             id = id,
+            description = description,
             transactionAmount = transactionAmount,
             transactionCurrency = transactionCurrency,
             transactionDate = transactionDate,

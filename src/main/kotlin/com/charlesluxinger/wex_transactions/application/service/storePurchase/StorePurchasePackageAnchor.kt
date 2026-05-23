@@ -1,3 +1,0 @@
-package com.charlesluxinger.wex_transactions.application.service.storePurchase
-
-internal object StorePurchasePackageAnchor

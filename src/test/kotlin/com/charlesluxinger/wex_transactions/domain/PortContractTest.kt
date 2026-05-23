@@ -7,10 +7,10 @@ import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundExcepti
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
+import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.StorePurchaseCommandPort
+import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseCommand
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
-import com.charlesluxinger.wex_transactions.domain.port.inbound.storePurchase.StorePurchaseCommandPort
-import com.charlesluxinger.wex_transactions.domain.port.inbound.storePurchase.model.StorePurchaseCommand
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import java.math.BigDecimal
@@ -29,6 +29,7 @@ class StorePurchaseCommandPortTest {
         val port = InMemoryStorePurchaseCommandPort()
         val command =
             StorePurchaseCommand(
+                description = "Fuel",
                 transactionAmount = BigDecimal("10.00"),
                 transactionCurrency = "USD",
                 transactionDate = "2026-01-10T10:30:45Z",
@@ -48,6 +49,7 @@ class StorePurchaseCommandPortTest {
         val port = InMemoryStorePurchaseCommandPort()
         val invalidCommand =
             StorePurchaseCommand(
+                description = "Fuel",
                 transactionAmount = BigDecimal("10.00"),
                 transactionCurrency = "BAD",
                 transactionDate = "2026-01-10T10:30:45Z",
@@ -63,6 +65,7 @@ class StorePurchaseCommandPortTest {
     fun `store purchase command data class should support copy and equality`() {
         val original =
             StorePurchaseCommand(
+                description = "Fuel",
                 transactionAmount = BigDecimal("10.00"),
                 transactionCurrency = "USD",
                 transactionDate = "2026-01-10T10:30:45Z",
@@ -71,7 +74,7 @@ class StorePurchaseCommandPortTest {
 
         val copied = original.copy(targetCurrency = "EUR")
 
-        assertEquals("USD", original.component2())
+        assertEquals("USD", original.transactionCurrency)
         assertEquals("EUR", copied.targetCurrency)
         assertEquals(original, original.copy())
     }
@@ -174,6 +177,7 @@ private class InMemoryStorePurchaseCommandPort : StorePurchaseCommandPort {
 
         return Purchase(
             id = 1L,
+            description = command.description,
             transactionAmount = command.transactionAmount,
             transactionCurrency = source,
             transactionDate = date,
@@ -219,6 +223,7 @@ private class FakeExchangeRateClientPort : ExchangeRateClientPort {
 private fun samplePurchase(id: Long): Purchase =
     Purchase(
         id = id,
+        description = "Fuel",
         transactionAmount = BigDecimal("10.00"),
         transactionCurrency = TargetCurrency("USD"),
         transactionDate = TransactionDate(LocalDateTime.of(2026, 1, 10, 10, 30, 45)),
