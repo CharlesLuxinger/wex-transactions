@@ -1,10 +1,10 @@
-package com.charlesluxinger.wex_transactions.application.service.storePurchase
+package com.charlesluxinger.wex_transactions.application.service.purchase
 
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
-import com.charlesluxinger.wex_transactions.domain.port.inbound.storePurchase.StorePurchaseCommandPort
-import com.charlesluxinger.wex_transactions.domain.port.inbound.storePurchase.model.StorePurchaseCommand
+import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.StorePurchaseCommandPort
+import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseCommand
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.springframework.stereotype.Service

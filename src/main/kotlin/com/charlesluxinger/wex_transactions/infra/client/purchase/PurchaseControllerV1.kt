@@ -1,11 +1,11 @@
-package com.charlesluxinger.wex_transactions.infra.client.storePurchase
+package com.charlesluxinger.wex_transactions.infra.client.purchase
 
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
-import com.charlesluxinger.wex_transactions.domain.port.inbound.storePurchase.StorePurchaseCommandPort
-import com.charlesluxinger.wex_transactions.domain.port.inbound.storePurchase.model.StorePurchaseCommand
-import com.charlesluxinger.wex_transactions.domain.port.inbound.storePurchase.model.StorePurchaseRequest
-import com.charlesluxinger.wex_transactions.domain.port.inbound.storePurchase.model.StorePurchaseResponse
+import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.StorePurchaseCommandPort
+import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseCommand
+import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseRequest
+import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseResponse
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -16,7 +16,7 @@ import java.math.BigDecimal
 
 @RestController
 @RequestMapping("/api/v1/purchases")
-class StorePurchaseControllerV1(
+class PurchaseControllerV1(
     private val storePurchaseCommandPort: StorePurchaseCommandPort,
 ) {
     @PostMapping

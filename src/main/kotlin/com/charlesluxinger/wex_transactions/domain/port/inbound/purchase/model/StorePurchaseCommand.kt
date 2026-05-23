@@ -1,4 +1,4 @@
-package com.charlesluxinger.wex_transactions.domain.port.inbound.storePurchase.model
+package com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model
 
 import java.math.BigDecimal
 

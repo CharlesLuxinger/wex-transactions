@@ -1,4 +1,4 @@
-package com.charlesluxinger.wex_transactions.infra.client.storePurchase
+package com.charlesluxinger.wex_transactions.infra.client.purchase
 
 import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTest
 import org.hamcrest.Matchers.equalTo
@@ -6,7 +6,7 @@ import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
-class StorePurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
+class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
     @Test
     @DisplayName("Should successfully store a valid purchase transaction")
     fun `should store purchase successfully`() {
