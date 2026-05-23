@@ -1,62 +1,146 @@
 # ROADMAP — WEX Transactions Tech Challenge
 
-## Milestone M1 — Foundation and Guardrails
-Goal: establish architecture skeleton and quality baseline before feature logic.
+## Roadmap Policy
+- Scope stays milestone-level, not implementation task breakdown.
+- Technical guardrails are explicit exit criteria, never implementation steps.
+- Challenge business policy is authoritative (`.docs/wex.md`), including 6-month rule.
+- Date input accepts ISO-8601 equivalents, with canonical normalization to `yyyy-MM-dd'T'HH:mm:ssXXX` before persistence.
+- Purchase identifier remains `Long` end-to-end.
+- Runtime acceptance target is PostgreSQL-only.
+- Minimal business error taxonomy only (4 errors from `.docs/wex.md`).
+- Light endpoint-shape notes are allowed only for reviewer readability.
 
-Deliverables:
-1. Layer/package scaffold (`domain`, `application`, `infra`) with naming conventions.
-2. Build dependencies and app config baseline (validation, HTTP client strategy, DB/runtime decision, tests).
-3. Architecture tests remain green and non-vacuous.
+Mandatory evidence command order (AGENTS-aligned):
+```bash
+./gradlew --no-daemon ktlintMainSourceSetCheck ktlintTestSourceSetCheck
+./gradlew --no-daemon detekt
+./gradlew --no-daemon test jacocoTestReport
+```
+Local pre-evidence hygiene (recommended):
+```bash
+./gradlew ktlintMainSourceSetFormat ktlintTestSourceSetFormat
+./gradlew ktlintMainSourceSetCheck ktlintTestSourceSetCheck
+./gradlew detekt
+./gradlew test
+```
+Coverage checks required in every milestone exit:
+- overall >= 90%
+- changed files >= 90%
+- domain package coverage = 100%
+- architecture tests remain non-vacuous
+
+---
+
+## Milestone M1 — Foundation and Guardrails
+Goal: establish architecture and quality baseline before feature slices.
 
 Exit criteria:
-- Build compiles
-- Architecture tests pass
-- No quality gate regressions
+- Architecture checks explicitly pass and are non-vacuous:
+  1. dependency direction (`infra -> application -> domain`)
+  2. controller boundary (controllers call inbound ports only)
+  3. use-case ownership (`application/service/**`, `*UseCaseImpl`)
+- Quality gates pass in required order.
+- Coverage thresholds hold (overall/changed-files/domain-100).
+
+Evidence block:
+```bash
+./gradlew --no-daemon ktlintMainSourceSetCheck ktlintTestSourceSetCheck
+./gradlew --no-daemon detekt
+./gradlew --no-daemon test jacocoTestReport
+```
+Risks:
+- Empty-pass architecture tests can hide boundary regressions.
+
+Non-goals:
+- No purchase creation behavior definition.
+- No conversion behavior definition.
+- No error-payload contract expansion.
 
 ---
 
 ## Milestone M2 — Feature A: Store Purchase
-Goal: vertical slice for purchase creation.
-
-Deliverables:
-1. Domain model/value objects + inbound/outbound ports.
-2. Application use case implementation.
-3. Persistence adapter + DB mapping.
-4. REST endpoint for create purchase.
-5. TDD coverage for domain/application/infra behavior and validations.
+Goal: validate and store purchase transaction with generated `Long` identifier.
 
 Exit criteria:
-- Creation workflow returns generated unique identifier
-- Validation/business errors enforced
-- Tests and coverage gates pass
+- Purchase storage acceptance rules are satisfied:
+  - description required, <= 50
+  - transaction date accepted as ISO-8601 equivalent and normalized canonically
+  - USD amount required, positive, rounded to 2 decimals
+  - unique `Long` ID returned
+- Minimal business error taxonomy applied for create path only.
+- Guardrails and coverage thresholds remain green.
+
+Evidence block:
+```bash
+./gradlew --no-daemon ktlintMainSourceSetCheck ktlintTestSourceSetCheck
+./gradlew --no-daemon detekt
+./gradlew --no-daemon test jacocoTestReport
+```
+Risks:
+- Date variant acceptance can drift from canonical persistence rule if not explicitly normalized.
+
+Non-goals:
+- No conversion retrieval success criteria.
+- No Treasury lookup behavior criteria.
+- No expansion beyond four business error categories.
 
 ---
 
 ## Milestone M3 — Feature B: Retrieve Converted Purchase
-Goal: retrieval with currency conversion using Treasury-only rates.
-
-Deliverables:
-1. Treasury rate outbound port + adapter.
-2. Rate lookup policy (`rate_date <= purchase_date`, within prior 6 months inclusive).
-3. Conversion use case/query endpoint.
-4. Rounding and response fields from business spec.
+Goal: retrieve stored purchase with Treasury-only conversion under challenge policy.
 
 Exit criteria:
-- Converted response contains required fields
-- Conversion-unavailable error behavior covered
-- Tests and coverage gates pass
+- Conversion uses Treasury Reporting Rates only.
+- Selected rate date is `<= purchase date`.
+- Eligible rate must be within prior 6 months inclusive from purchase date.
+- If no eligible rate exists, conversion-unavailable business error is returned.
+- Returned data includes required fields (id, description, date, original USD amount, exchange rate used, converted amount).
+- Converted amount rounded to 2 decimals.
+- Guardrails and coverage thresholds remain green.
+
+Evidence block:
+```bash
+./gradlew --no-daemon ktlintMainSourceSetCheck ktlintTestSourceSetCheck
+./gradlew --no-daemon detekt
+./gradlew --no-daemon test jacocoTestReport
+```
+Risks:
+- External Treasury semantics can be interpreted differently than challenge acceptance policy.
+
+Non-goals:
+- No alternative FX provider.
+- No generic fallback beyond challenge rule.
+- No performance SLA objectives.
 
 ---
 
-## Milestone M4 — Cross-Cutting Hardening
-Goal: finalize error taxonomy, compliance, documentation traceability.
-
-Deliverables:
-1. Consistent exception mapping strategy.
-2. Requirement-to-test traceability matrix.
-3. Final verification run (ktlint, detekt, tests, JaCoCo).
+## Milestone M4 — Cross-Cutting Hardening and Reviewer Handoff
+Goal: finalize traceability, compliance evidence, and handoff clarity.
 
 Exit criteria:
-- All required checks green
-- No unresolved ambiguity impacting acceptance
-- Documentation complete for reviewer handoff
+- Full REQ-to-milestone traceability matrix complete.
+- Business error taxonomy remains minimal and stable.
+- Reviewer appendix includes light interface-behavior notes (no endpoint/payload contract freezing in roadmap phase).
+- Appendix error-path notes must explicitly include non-ISO input rejection examples to clarify accepted date-format variants.
+- Appendix conversion-unavailable samples must include boundary evidence: exactly 6 months (accepted) and 6 months + 1 day (rejected).
+- All mandated checks pass in order; coverage thresholds satisfied.
+- Architecture checks remain non-vacuous and green.
+
+Evidence block:
+```bash
+./gradlew --no-daemon ktlintMainSourceSetCheck ktlintTestSourceSetCheck
+./gradlew --no-daemon detekt
+./gradlew --no-daemon test jacocoTestReport
+```
+
+Risks:
+- Missing traceability artifacts can weaken evaluator confidence.
+
+Non-goals:
+- No new functional scope.
+- No architecture model change.
+- No post-challenge optimization backlog.
+
+## Notes for Consistency
+- Keep milestones strategic and reviewer-facing.
+- If any policy conflicts appear, apply authority order from `AGENTS.md` / `spec.md`.
