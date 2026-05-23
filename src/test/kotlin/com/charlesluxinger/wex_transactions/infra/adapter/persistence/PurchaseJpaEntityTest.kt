@@ -4,6 +4,7 @@ import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
+import org.junit.jupiter.api.Assertions.assertThrows
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDateTime
@@ -127,6 +128,12 @@ class PurchaseJpaEntityTest {
         assertEquals(BigDecimal("1.123456"), purchase.exchangeRate)
         assertEquals(BigDecimal("11111.11"), purchase.convertedAmount)
         assertEquals(LATER, purchase.createdAt)
+    }
+
+    @Test
+    fun `toDomain with null id throws IllegalArgumentException`() {
+        val entity = createPurchase(id = null)
+        assertThrows(IllegalArgumentException::class.java) { entity.toDomain() }
     }
 
     @Test

@@ -7,10 +7,10 @@ import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundExcepti
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
-import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
-import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.StorePurchaseCommandPort
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseCommand
+import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
+import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import java.math.BigDecimal
