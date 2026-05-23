@@ -1,5 +1,9 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.persistence
 
+import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
+import com.charlesluxinger.wex_transactions.domain.model.Purchase
+import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
+import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -8,6 +12,8 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 @Entity
 @Table(name = "purchases")
@@ -32,4 +38,40 @@ class PurchaseJpaEntity(
     var convertedAmount: BigDecimal,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,
-)
+) {
+    fun toDomain(): Purchase =
+        Purchase(
+            id = requireNotNull(id) { "Purchase id must not be null after persistence" },
+            description = description,
+            transactionAmount = transactionAmount,
+            transactionCurrency = TargetCurrency(transactionCurrency),
+            transactionDate = TransactionDate(LocalDateTime.ofInstant(transactionDate, ZoneOffset.UTC)),
+            targetCurrency = TargetCurrency(targetCurrency),
+            exchangeRate =
+                ExchangeRate(
+                    rate = exchangeRate,
+                    sourceCurrency = TargetCurrency(transactionCurrency),
+                    targetCurrency = TargetCurrency(targetCurrency),
+                    retrievedAt = createdAt,
+                ),
+            convertedAmount = convertedAmount,
+            createdAt = createdAt,
+        )
+
+    companion object {
+        fun fromDomain(purchase: Purchase): PurchaseJpaEntity =
+            PurchaseJpaEntity(
+                description = purchase.description,
+                transactionAmount = purchase.transactionAmount,
+                transactionCurrency = purchase.transactionCurrency.code,
+                transactionDate =
+                    purchase.transactionDate.value
+                        .atOffset(ZoneOffset.UTC)
+                        .toInstant(),
+                targetCurrency = purchase.targetCurrency.code,
+                exchangeRate = purchase.exchangeRate.rate,
+                convertedAmount = purchase.convertedAmount,
+                createdAt = purchase.createdAt,
+            )
+    }
+}
