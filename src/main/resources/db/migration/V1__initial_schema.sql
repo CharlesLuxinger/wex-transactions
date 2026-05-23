@@ -1,6 +1,6 @@
 CREATE TABLE purchases (
     id BIGSERIAL PRIMARY KEY,
-    description VARCHAR(255) NOT NULL,
+    description VARCHAR(50) NOT NULL,
     transaction_amount DECIMAL(18,6) NOT NULL,
     transaction_currency VARCHAR(3) NOT NULL,
     transaction_date TIMESTAMP WITH TIME ZONE NOT NULL,

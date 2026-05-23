@@ -16,7 +16,7 @@ class PurchaseJpaEntity(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     var id: Long? = null,
-    @Column(name = "description", nullable = false, length = 255)
+    @Column(name = "description", nullable = false, length = 50)
     var description: String,
     @Column(name = "transaction_amount", nullable = false, precision = 18, scale = 6)
     var transactionAmount: BigDecimal,

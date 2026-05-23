@@ -10,6 +10,7 @@ import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.utility.DockerImageName
 
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
@@ -18,7 +19,7 @@ class PersistenceFlywayIntegrationTest {
         @Container
         @JvmStatic
         val postgres =
-            PostgreSQLContainer("postgres:16-alpine")
+            PostgreSQLContainer(DockerImageName.parse("postgres:18.1-alpine3.23"))
                 .withDatabaseName("wex_transactions")
                 .withUsername("postgres")
                 .withPassword("postgres")
