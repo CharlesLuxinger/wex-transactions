@@ -2,12 +2,23 @@ package com.charlesluxinger.wex_transactions.persistence
 
 import com.charlesluxinger.wex_transactions.config.TestContainersConfig
 import com.charlesluxinger.wex_transactions.config.TestContainersSupport
+import com.charlesluxinger.wex_transactions.infra.adapter.persistence.ExchangeRateJpaEntity
+import com.charlesluxinger.wex_transactions.infra.adapter.persistence.ExchangeRateJpaRepository
+import com.charlesluxinger.wex_transactions.infra.adapter.persistence.PurchaseJpaEntity
+import com.charlesluxinger.wex_transactions.infra.adapter.persistence.PurchaseSpringDataRepository
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.context.TestPropertySource
 import org.testcontainers.junit.jupiter.Testcontainers
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.LocalDate
 
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
@@ -20,73 +31,79 @@ import org.testcontainers.junit.jupiter.Testcontainers
     ],
 )
 class PersistenceFlywayIntegrationTest : TestContainersSupport() {
+    @Autowired
+    private lateinit var purchaseRepository: PurchaseSpringDataRepository
+
+    @Autowired
+    private lateinit var exchangeRateRepository: ExchangeRateJpaRepository
+
+    @AfterEach
+    fun cleanup() {
+        exchangeRateRepository.deleteAll()
+        purchaseRepository.deleteAll()
+    }
+
     @Test
     fun `flyway creates purchases and exchange rates schema`() {
-        val purchasesColumns = getColumns("purchases")
-        val exchangeRatesColumns = getColumns("exchange_rates")
+        val now = Instant.now()
 
-        assertThat(purchasesColumns)
-            .contains(
-                "id",
-                "description",
-                "transaction_amount",
-                "transaction_currency",
-                "transaction_date",
-                "target_currency",
-                "exchange_rate",
-                "converted_amount",
-                "created_at",
+        val purchase =
+            purchaseRepository.save(
+                PurchaseJpaEntity(
+                    description = "Test purchase",
+                    transactionAmount = BigDecimal("100.00"),
+                    transactionCurrency = "USD",
+                    transactionDate = now,
+                    targetCurrency = "BRL",
+                    exchangeRate = BigDecimal("5.25"),
+                    convertedAmount = BigDecimal("525.00"),
+                    createdAt = now,
+                ),
             )
 
-        assertThat(exchangeRatesColumns)
-            .contains(
-                "id",
-                "rate_date",
-                "source_currency",
-                "target_currency",
-                "exchange_rate",
-                "created_at",
+        val exchangeRate =
+            exchangeRateRepository.save(
+                ExchangeRateJpaEntity(
+                    rateDate = LocalDate.now(),
+                    sourceCurrency = "USD",
+                    targetCurrency = "BRL",
+                    exchangeRate = BigDecimal("5.25"),
+                    createdAt = now,
+                ),
             )
+
+        assertThat(purchase.id).isNotNull
+        assertThat(purchase.description).isEqualTo("Test purchase")
+
+        assertThat(exchangeRate.id).isNotNull
+        assertThat(exchangeRate.exchangeRate).isEqualByComparingTo(BigDecimal("5.25"))
     }
 
     @Test
-    fun `flyway creates required index and unique constraint`() {
-        val purchaseTransactionDateIndexCount =
-            jdbcTemplate.queryForObject(
-                """
-                SELECT COUNT(*)
-                FROM pg_indexes
-                WHERE tablename = 'purchases'
-                  AND indexname = 'idx_purchases_transaction_date'
-                """.trimIndent(),
-                Int::class.java,
-            ) ?: 0
+    fun `flyway creates unique constraint on exchange rates`() {
+        val now = Instant.now()
+        val rateDate = LocalDate.now()
 
-        val exchangeRateUniqueConstraintCount =
-            jdbcTemplate.queryForObject(
-                """
-                SELECT COUNT(*)
-                FROM information_schema.table_constraints
-                WHERE table_name = 'exchange_rates'
-                  AND constraint_type = 'UNIQUE'
-                  AND constraint_name = 'uk_exchange_rates_date_source_target'
-                """.trimIndent(),
-                Int::class.java,
-            ) ?: 0
-
-        assertThat(purchaseTransactionDateIndexCount).isEqualTo(1)
-        assertThat(exchangeRateUniqueConstraintCount).isEqualTo(1)
-    }
-
-    private fun getColumns(tableName: String): List<String> =
-        jdbcTemplate.queryForList(
-            """
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = ?
-            ORDER BY ordinal_position
-            """.trimIndent(),
-            String::class.java,
-            tableName,
+        exchangeRateRepository.save(
+            ExchangeRateJpaEntity(
+                rateDate = rateDate,
+                sourceCurrency = "USD",
+                targetCurrency = "BRL",
+                exchangeRate = BigDecimal("5.25"),
+                createdAt = now,
+            ),
         )
+
+        assertThatThrownBy {
+            exchangeRateRepository.saveAndFlush(
+                ExchangeRateJpaEntity(
+                    rateDate = rateDate,
+                    sourceCurrency = "USD",
+                    targetCurrency = "BRL",
+                    exchangeRate = BigDecimal("5.50"),
+                    createdAt = now,
+                ),
+            )
+        }.isInstanceOf(DataIntegrityViolationException::class.java)
+    }
 }

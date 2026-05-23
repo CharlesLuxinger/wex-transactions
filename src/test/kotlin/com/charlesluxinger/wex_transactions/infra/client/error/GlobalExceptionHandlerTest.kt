@@ -1,12 +1,16 @@
 package com.charlesluxinger.wex_transactions.infra.client.error
 
 import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyException
+import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
+import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.springframework.core.MethodParameter
 import org.springframework.http.HttpStatus
+import org.springframework.http.ProblemDetail
+import org.springframework.http.ResponseEntity
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -61,5 +65,29 @@ class GlobalExceptionHandlerTest {
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
         assertThat(response.body?.detail).isEqualTo("Validation failed")
+    }
+
+    @Test
+    @DisplayName("PurchaseNotFoundException returns NOT_FOUND with Not Found title")
+    fun `handle purchase not found exception`() {
+        val ex = PurchaseNotFoundException(77)
+        val response = handler.handlePurchaseNotFoundException(ex)
+
+        assertThat(response).isInstanceOf(ResponseEntity::class.java)
+        assertThat(response.body).isInstanceOf(ProblemDetail::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+        assertThat(response.body?.title).isEqualTo("Not Found")
+        assertThat(response.body?.detail).isEqualTo("Purchase with ID 77 not found")
+    }
+
+    @Test
+    @DisplayName("RateUnavailableException returns UNPROCESSABLE_ENTITY with Conversion Unavailable title")
+    fun `handle rate unavailable exception`() {
+        val ex = RateUnavailableException("USD", "BRL")
+        val response = handler.handleRateUnavailableException(ex)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY)
+        assertThat(response.body?.title).isEqualTo("Conversion Unavailable")
+        assertThat(response.body?.detail).isEqualTo("Exchange rate unavailable: USD → BRL")
     }
 }
