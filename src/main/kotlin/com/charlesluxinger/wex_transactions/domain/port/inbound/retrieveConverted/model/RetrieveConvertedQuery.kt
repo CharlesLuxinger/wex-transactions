@@ -2,4 +2,5 @@ package com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConvert
 
 data class RetrieveConvertedQuery(
     val purchaseId: Long,
+    val targetCurrency: String,
 )

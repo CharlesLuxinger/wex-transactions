@@ -6,6 +6,7 @@ import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.StorePu
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseCommand
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseRequest
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseResponse
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -22,7 +23,7 @@ class PurchaseControllerV1(
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun storePurchase(
-        @jakarta.validation.Valid @RequestBody request: StorePurchaseRequest,
+        @Valid @RequestBody request: StorePurchaseRequest,
     ): StorePurchaseResponse {
         validate(request)
 

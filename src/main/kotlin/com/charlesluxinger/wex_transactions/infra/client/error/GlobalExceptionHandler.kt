@@ -1,6 +1,8 @@
 package com.charlesluxinger.wex_transactions.infra.client.error
 
 import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyException
+import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
+import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
@@ -55,5 +57,29 @@ class GlobalExceptionHandler {
         problemDetail.title = "Invalid Currency"
         problemDetail.type = URI.create("about:blank")
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail)
+    }
+
+    @ExceptionHandler(PurchaseNotFoundException::class)
+    fun handlePurchaseNotFoundException(ex: PurchaseNotFoundException): ResponseEntity<ProblemDetail> {
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND,
+                ex.message ?: "Purchase not found",
+            )
+        problemDetail.title = "Not Found"
+        problemDetail.type = URI.create("about:blank")
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail)
+    }
+
+    @ExceptionHandler(RateUnavailableException::class)
+    fun handleRateUnavailableException(ex: RateUnavailableException): ResponseEntity<ProblemDetail> {
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                ex.message ?: "Exchange rate unavailable",
+            )
+        problemDetail.title = "Conversion Unavailable"
+        problemDetail.type = URI.create("about:blank")
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(problemDetail)
     }
 }

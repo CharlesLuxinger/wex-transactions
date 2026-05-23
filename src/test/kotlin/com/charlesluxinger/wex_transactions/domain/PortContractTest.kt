@@ -11,11 +11,14 @@ import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.StorePu
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseCommand
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
+import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedResponse
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
+import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateRepositoryPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -82,33 +85,48 @@ class StorePurchaseCommandPortTest {
 
 class RetrieveConvertedQueryPortTest {
     @Test
-    fun `port should accept RetrieveConvertedQuery and return Purchase`() {
+    fun `port should accept RetrieveConvertedQuery and return RetrieveConvertedResponse`() {
         val repository = InMemoryPurchaseRepositoryPort()
+        val exchangeRateRepository = InMemoryExchangeRateRepositoryPort()
         val purchase = samplePurchase(id = 123L)
         repository.save(purchase)
-        val port: RetrieveConvertedQueryPort = InMemoryRetrieveConvertedQueryPort(repository)
+        val port: RetrieveConvertedQueryPort = InMemoryRetrieveConvertedQueryPort(repository, exchangeRateRepository)
 
-        val result = port.retrieveConverted(RetrieveConvertedQuery(123L))
+        val result = port.retrieveConverted(RetrieveConvertedQuery(123L, "BRL"))
 
-        assertEquals(123L, result.id)
+        assertEquals(123L, result.purchaseId)
     }
 
     @Test
     fun `port should throw PurchaseNotFoundException if not found`() {
         val repository = InMemoryPurchaseRepositoryPort()
-        val port: RetrieveConvertedQueryPort = InMemoryRetrieveConvertedQueryPort(repository)
+        val exchangeRateRepository = InMemoryExchangeRateRepositoryPort()
+        val port: RetrieveConvertedQueryPort = InMemoryRetrieveConvertedQueryPort(repository, exchangeRateRepository)
 
         assertFailsWith<PurchaseNotFoundException> {
-            port.retrieveConverted(RetrieveConvertedQuery(999L))
+            port.retrieveConverted(RetrieveConvertedQuery(999L, "BRL"))
+        }
+    }
+
+    @Test
+    fun `port should throw RateUnavailableException if no rate found`() {
+        val repository = InMemoryPurchaseRepositoryPort()
+        val exchangeRateRepository = InMemoryExchangeRateRepositoryPort()
+        val purchase = samplePurchase(id = 456L)
+        repository.save(purchase)
+        val port: RetrieveConvertedQueryPort = InMemoryRetrieveConvertedQueryPort(repository, exchangeRateRepository)
+
+        assertFailsWith<RateUnavailableException> {
+            port.retrieveConverted(RetrieveConvertedQuery(456L, "EUR"))
         }
     }
 
     @Test
     fun `retrieve converted query data class should support copy and equality`() {
-        val query = RetrieveConvertedQuery(10)
+        val query = RetrieveConvertedQuery(10, "EUR")
         val copied = query.copy(purchaseId = 11)
 
-        assertEquals(10L, query.component1())
+        assertEquals(10L, query.purchaseId)
         assertEquals(11L, copied.purchaseId)
         assertEquals(query, query.copy())
     }
@@ -191,9 +209,33 @@ private class InMemoryStorePurchaseCommandPort : StorePurchaseCommandPort {
 
 private class InMemoryRetrieveConvertedQueryPort(
     private val repository: PurchaseRepositoryPort,
+    private val exchangeRateRepository: ExchangeRateRepositoryPort,
 ) : RetrieveConvertedQueryPort {
-    override fun retrieveConverted(query: RetrieveConvertedQuery): Purchase =
-        repository.findById(query.purchaseId) ?: throw PurchaseNotFoundException(query.purchaseId)
+    override fun retrieveConverted(query: RetrieveConvertedQuery): RetrieveConvertedResponse {
+        val purchase = repository.findById(query.purchaseId) ?: throw PurchaseNotFoundException(query.purchaseId)
+        val targetCurrency = TargetCurrency(query.targetCurrency)
+        val rateDate = purchase.transactionDate.value.toLocalDate()
+        val rate =
+            exchangeRateRepository.findNearestPriorRate(
+                sourceCurrency = purchase.transactionCurrency,
+                targetCurrency = targetCurrency,
+                rateDate = rateDate,
+                maxWindowMonths = 6,
+            ) ?: throw RateUnavailableException(purchase.transactionCurrency.code, targetCurrency.code)
+
+        val convertedAmount = purchase.transactionAmount.multiply(rate.rate).setScale(2, RoundingMode.HALF_UP)
+
+        return RetrieveConvertedResponse(
+            purchaseId = purchase.id,
+            description = purchase.description,
+            transactionDate = purchase.transactionDate.toCanonicalString(),
+            originalUsdAmount = purchase.transactionAmount,
+            exchangeRateUsed = rate.rate,
+            convertedAmount = convertedAmount,
+            targetCurrency = targetCurrency.code,
+            createdAt = purchase.createdAt,
+        )
+    }
 }
 
 private class InMemoryPurchaseRepositoryPort : PurchaseRepositoryPort {
@@ -205,6 +247,25 @@ private class InMemoryPurchaseRepositoryPort : PurchaseRepositoryPort {
     }
 
     override fun findById(id: Long): Purchase? = storage[id]
+}
+
+private class InMemoryExchangeRateRepositoryPort : ExchangeRateRepositoryPort {
+    override fun findNearestPriorRate(
+        sourceCurrency: TargetCurrency,
+        targetCurrency: TargetCurrency,
+        rateDate: LocalDate,
+        maxWindowMonths: Long,
+    ): ExchangeRate? {
+        if (sourceCurrency == TargetCurrency("USD") && targetCurrency == TargetCurrency("BRL")) {
+            return ExchangeRate(
+                BigDecimal("5.000000"),
+                sourceCurrency,
+                targetCurrency,
+                Instant.parse("2026-01-10T10:00:00Z"),
+            )
+        }
+        return null
+    }
 }
 
 private class FakeExchangeRateClientPort : ExchangeRateClientPort {

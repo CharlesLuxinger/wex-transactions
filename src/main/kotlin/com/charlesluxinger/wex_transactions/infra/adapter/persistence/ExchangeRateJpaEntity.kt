@@ -1,5 +1,7 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.persistence
 
+import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
+import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -27,4 +29,12 @@ class ExchangeRateJpaEntity(
     var exchangeRate: BigDecimal,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,
-)
+) {
+    fun toDomain(): ExchangeRate =
+        ExchangeRate(
+            rate = exchangeRate,
+            sourceCurrency = TargetCurrency(sourceCurrency),
+            targetCurrency = TargetCurrency(targetCurrency),
+            retrievedAt = createdAt,
+        )
+}
