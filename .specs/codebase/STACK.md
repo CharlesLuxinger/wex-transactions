@@ -7,4 +7,9 @@
 - Build: Gradle Kotlin DSL
 - Quality: ktlint, detekt, JaCoCo
 - Tests: JUnit 5, ArchUnit
-- Database: PostgreSQL 18.x
+- Database: PostgreSQL 18.x + Flyway
+- Containerization: Docker + Docker Compose
+- CI/CD: GitHub Actions
+- Documentation: Markdown + OpenAPI (Swagger)
+- Version control: Git (GitHub repository)
+

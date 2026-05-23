@@ -10,14 +10,15 @@
 - Identify and resolve ambiguities before coding.
 
 ## Blockers
-- No active blocker for requirement decomposition. Implementation can proceed with fixed contract decisions.
+- Active blocker for implementation details: unresolved HTTP status mapping, idempotency behavior, and Treasury endpoint/response shape in context file.
+- No blocker for requirement decomposition itself.
 
 ## Open Questions Pointer
 - See `.specs/features/wex-tech-challenge/context.md`.
 
 ## Next Actions
-1. Freeze endpoint and DTO contracts from resolved decisions.
-2. Execute tasks in `tasks.md` using TDD and governance checks.
+1. Keep endpoint/DTO contract definition deferred; continue implementation-task decomposition only.
+2. Execute tasks in `.sisyphus/plans/wex-tech-challenge-implementation-tasks.md` using TDD and governance checks.
 3. Run full verification gates before submission.
 
 ## Preferences
