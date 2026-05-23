@@ -29,7 +29,7 @@ class ControllerBoundaryTest : ArchitectureTest() {
         val rule =
             noClasses()
                 .that()
-                .resideInAnyPackage("$INFRA_CLIENT_PACKAGE..")
+                .resideInAnyPackage(INFRA_CLIENT_PACKAGE)
                 .should()
                 .dependOnClassesThat()
                 .resideInAnyPackage("..repository..", "..Repository..")
@@ -53,7 +53,7 @@ class ControllerBoundaryTest : ArchitectureTest() {
         val rule =
             noClasses()
                 .that()
-                .resideInAnyPackage("$INFRA_CLIENT_PACKAGE..")
+                .resideInAnyPackage(INFRA_CLIENT_PACKAGE)
                 .should()
                 .dependOnClassesThat()
                 .resideInAnyPackage("..adapter..", "..Adapter..")
