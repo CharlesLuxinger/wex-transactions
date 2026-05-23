@@ -11,14 +11,14 @@ import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
 import java.math.BigDecimal
+import java.time.Instant.now
 import java.time.LocalDate
+import org.springframework.beans.factory.annotation.Autowired
 
 class RetrieveConvertedControllerV1Test :
     AbstractRestApiIntegrationTest(),
     RestAssuredRequestSupport {
-
     @Autowired
     private lateinit var exchangeRateJpaRepository: ExchangeRateJpaRepository
 
@@ -30,7 +30,7 @@ class RetrieveConvertedControllerV1Test :
                 sourceCurrency = "USD",
                 targetCurrency = "BRL",
                 exchangeRate = BigDecimal("5.25"),
-                createdAt = java.time.Instant.now(),
+                createdAt = now(),
             ),
         )
     }

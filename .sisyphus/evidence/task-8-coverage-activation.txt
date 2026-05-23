@@ -1,0 +1,18 @@
+Task 8 — Coverage Policy Activation Evidence
+=============================================
+Date: 2026-05-23
+Status: PASS
+
+Coverage verification commands:
+  ./gradlew --no-daemon test jacocoTestReport jacocoTestCoverageVerification
+
+Result: BUILD SUCCESSFUL
+
+CI pipeline (ci.yml) updated:
+  - Step now includes: ./gradlew --no-daemon test jacocoTestReport jacocoTestCoverageVerification
+
+JaCoCo thresholds (build.gradle.kts):
+  - Overall: >= 0.9
+  - Domain package: 1.0
+
+Exclusions: **/config/**, **/health/**

@@ -2,6 +2,7 @@ package com.charlesluxinger.wex_transactions.architecture
 
 import com.tngtech.archunit.core.domain.JavaClasses
 import com.tngtech.archunit.core.importer.ClassFileImporter
+import com.tngtech.archunit.core.importer.ImportOption
 
 /**
  * Base class for architecture tests providing centralized import and package constants.
@@ -26,14 +27,17 @@ abstract class ArchitectureTest {
     }
 
     /**
-     * Imports all production classes under the base package.
+     * Imports all production classes under the base package, excluding test classes.
      *
      * This ensures architecture tests only validate production code,
      * not test infrastructure or fixtures.
      *
      * @return JavaClasses resolved from production packages only
      */
-    protected fun importClasses(): JavaClasses = ClassFileImporter().importPackages(BASE_PACKAGE)
+    protected fun importClasses(): JavaClasses =
+        ClassFileImporter()
+            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+            .importPackages(BASE_PACKAGE)
 
     /**
      * Imports only classes from a specific package and its subpackages.

@@ -43,7 +43,7 @@ jobs:
         run: ./gradlew --no-daemon detekt
 
       - name: Run tests with coverage
-        run: ./gradlew --no-daemon test jacocoTestReport
+        run: ./gradlew --no-daemon test jacocoTestReport jacocoTestCoverageVerification
 
       - name: Generate coverage badges
         if: github.event_name == 'pull_request' && github.event.pull_request.merged != true

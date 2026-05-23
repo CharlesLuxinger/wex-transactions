@@ -12,3 +12,4 @@ trim_trailing_whitespace = true
 ktlint_style = official
 ktlint_standard_package-name = disabled
 max_line_length = 120
+ktlint_standard_import-ordering = disabled
