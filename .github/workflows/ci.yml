@@ -55,14 +55,6 @@ jobs:
           generate-coverage-badge: true
           on-missing-report: fail
 
-      - name: Commit and push badges
-        if: github.event_name == 'pull_request' && github.event.pull_request.merged != true
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: 'ci: update jacoco coverage badges [skip ci]'
-          file_pattern: badges/*.svg
-          branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-
       - name: Add coverage to PR summary
         if: always()
         uses: madrapps/jacoco-report@v1.7.1
