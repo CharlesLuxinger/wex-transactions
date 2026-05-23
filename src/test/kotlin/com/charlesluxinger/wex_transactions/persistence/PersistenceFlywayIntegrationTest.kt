@@ -1,50 +1,29 @@
 package com.charlesluxinger.wex_transactions.persistence
 
+import com.charlesluxinger.wex_transactions.config.TestContainersConfig
+import com.charlesluxinger.wex_transactions.config.TestContainersSupport
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.TestPropertySource
 import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
 
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
-class PersistenceFlywayIntegrationTest {
-    companion object {
-        @Container
-        @JvmStatic
-        val postgres =
-            PostgreSQLContainer(DockerImageName.parse("postgres:18.1-alpine3.23"))
-                .withDatabaseName("wex_transactions")
-                .withUsername("postgres")
-                .withPassword("postgres")
-
-        @JvmStatic
-        @DynamicPropertySource
-        fun configureDatasource(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url") { postgres.jdbcUrl }
-            registry.add("spring.datasource.username") { postgres.username }
-            registry.add("spring.datasource.password") { postgres.password }
-            registry.add("spring.datasource.driver-class-name") { "org.postgresql.Driver" }
-            registry.add("spring.jpa.database-platform") { "org.hibernate.dialect.PostgreSQLDialect" }
-            registry.add("spring.jpa.hibernate.ddl-auto") { "validate" }
-            registry.add("spring.flyway.enabled") { true }
-            registry.add("spring.flyway.locations") { "classpath:db/migration" }
-        }
-    }
-
-    @Autowired
-    private lateinit var jdbcTemplate: JdbcTemplate
-
+@Import(TestContainersConfig::class)
+@TestPropertySource(
+    properties = [
+        "spring.jpa.hibernate.ddl-auto=none",
+        "spring.flyway.enabled=true",
+        "spring.flyway.locations=classpath:db/migration",
+    ],
+)
+class PersistenceFlywayIntegrationTest : TestContainersSupport() {
     @Test
     fun `flyway creates purchases and exchange rates schema`() {
-        val purchasesColumns = columns("purchases")
-        val exchangeRatesColumns = columns("exchange_rates")
+        val purchasesColumns = getColumns("purchases")
+        val exchangeRatesColumns = getColumns("exchange_rates")
 
         assertThat(purchasesColumns)
             .contains(
@@ -99,7 +78,7 @@ class PersistenceFlywayIntegrationTest {
         assertThat(exchangeRateUniqueConstraintCount).isEqualTo(1)
     }
 
-    private fun columns(tableName: String): List<String> =
+    private fun getColumns(tableName: String): List<String> =
         jdbcTemplate.queryForList(
             """
             SELECT column_name
