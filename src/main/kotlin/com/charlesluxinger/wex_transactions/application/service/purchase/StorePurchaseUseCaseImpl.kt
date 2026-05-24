@@ -53,6 +53,6 @@ class StorePurchaseUseCaseImpl(
     companion object {
         private const val NEW_PURCHASE_PLACEHOLDER_ID = 1L
         private const val MAX_DESCRIPTION_LENGTH = 50
-        private const val CONVERSION_SCALE = 6
+        private const val CONVERSION_SCALE = 2
     }
 }

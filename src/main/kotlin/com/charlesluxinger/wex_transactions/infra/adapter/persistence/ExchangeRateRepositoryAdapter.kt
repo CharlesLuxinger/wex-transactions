@@ -6,6 +6,7 @@ import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateRep
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.time.LocalDate
+import org.springframework.transaction.annotation.Transactional
 
 @Component
 class ExchangeRateRepositoryAdapter(
@@ -22,12 +23,14 @@ class ExchangeRateRepositoryAdapter(
             exchangeRateJpaRepository.findNearestPriorRate(
                 sourceCurrency = sourceCurrency.code,
                 targetCurrency = targetCurrency.code,
+                rateSource = ExchangeRateJpaEntity.TREASURY_SOURCE,
                 rateDate = rateDate,
                 minDate = minDate,
             )
         return results.firstOrNull()?.toDomain()
     }
 
+    @Transactional
     override fun save(
         exchangeRate: ExchangeRate,
         rateDate: LocalDate,
@@ -39,6 +42,7 @@ class ExchangeRateRepositoryAdapter(
                 targetCurrency = exchangeRate.targetCurrency.code,
                 exchangeRate = exchangeRate.rate,
                 createdAt = Instant.now(),
+                rateSource = ExchangeRateJpaEntity.TREASURY_SOURCE,
             )
         return exchangeRateJpaRepository.save(entity).toDomain()
     }

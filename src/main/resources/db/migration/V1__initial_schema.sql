@@ -15,6 +15,7 @@ CREATE INDEX idx_purchases_transaction_date ON purchases (transaction_date);
 CREATE TABLE exchange_rates (
     id BIGSERIAL PRIMARY KEY,
     rate_date DATE NOT NULL,
+    rate_source VARCHAR(32) NOT NULL,
     source_currency VARCHAR(3) NOT NULL,
     target_currency VARCHAR(3) NOT NULL,
     exchange_rate DECIMAL(18,6) NOT NULL,
