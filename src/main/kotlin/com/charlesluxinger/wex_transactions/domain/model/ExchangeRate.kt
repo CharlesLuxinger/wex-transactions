@@ -31,6 +31,6 @@ class ExchangeRate(
     override fun toString(): String = "$sourceCurrency/$targetCurrency=$rate"
 
     companion object {
-        private const val SCALE = 6
+        private const val SCALE = 2
     }
 }

@@ -6,6 +6,7 @@ import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedResponse
+import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateRepositoryPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.springframework.stereotype.Service
@@ -15,6 +16,7 @@ import java.math.RoundingMode
 class RetrieveConvertedUseCaseImpl(
     private val purchaseRepositoryPort: PurchaseRepositoryPort,
     private val exchangeRateRepositoryPort: ExchangeRateRepositoryPort,
+    private val exchangeRateClientPort: ExchangeRateClientPort,
 ) : RetrieveConvertedQueryPort {
     override fun retrieveConverted(query: RetrieveConvertedQuery): RetrieveConvertedResponse {
         val purchase =
@@ -25,13 +27,25 @@ class RetrieveConvertedUseCaseImpl(
         val targetCurrency = TargetCurrency(query.targetCurrency)
         val rateDate = purchase.transactionDate.value.toLocalDate()
 
-        val rate =
+        val persistedRate =
             exchangeRateRepositoryPort.findNearestPriorRate(
                 sourceCurrency = sourceCurrency,
                 targetCurrency = targetCurrency,
                 rateDate = rateDate,
                 maxWindowMonths = MAX_WINDOW_MONTHS,
-            ) ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
+            )
+
+        val rate =
+            persistedRate
+                ?: exchangeRateClientPort
+                    .fetchNearestPriorRate(
+                        sourceCurrency = sourceCurrency,
+                        targetCurrency = targetCurrency,
+                        rateDate = rateDate,
+                        maxWindowMonths = MAX_WINDOW_MONTHS,
+                    )?.also { fetchedRate ->
+                        exchangeRateRepositoryPort.save(fetchedRate, rateDate)
+                    } ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
 
         val convertedAmount =
             purchase.transactionAmount

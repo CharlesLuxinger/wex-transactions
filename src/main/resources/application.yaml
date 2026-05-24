@@ -14,3 +14,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  cloud:
+    openfeign:
+      client:
+        config:
+          treasury-rates:
+            connect-timeout: 1000
+            read-timeout: 3000

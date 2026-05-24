@@ -1,11 +1,24 @@
 package com.charlesluxinger.wex_transactions.infra.client.purchase
 
 import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTest
+import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
+import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
+import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Primary
+import org.springframework.context.annotation.Profile
+import org.springframework.test.context.ActiveProfiles
+import java.math.BigDecimal
+import java.time.Instant
 
+@ActiveProfiles("test")
+@Import(StubExchangeRateClientConfig::class)
 class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
     @Test
     @DisplayName("Should successfully store a valid purchase transaction")
@@ -144,4 +157,25 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .body("title", equalTo("Invalid Currency"))
             .body("detail", equalTo("Invalid currency code: INVALID"))
     }
+}
+
+@Profile("test")
+@TestConfiguration
+class StubExchangeRateClientConfig {
+    @Bean
+    @Primary
+    fun stubExchangeRateClientPort(): ExchangeRateClientPort =
+        object : ExchangeRateClientPort {
+            override fun fetchRate(
+                from: TargetCurrency,
+                to: TargetCurrency,
+            ): ExchangeRate = ExchangeRate(BigDecimal.ONE, from, to, Instant.now())
+
+            override fun fetchNearestPriorRate(
+                sourceCurrency: TargetCurrency,
+                targetCurrency: TargetCurrency,
+                rateDate: java.time.LocalDate,
+                maxWindowMonths: Long,
+            ): ExchangeRate? = null
+        }
 }
