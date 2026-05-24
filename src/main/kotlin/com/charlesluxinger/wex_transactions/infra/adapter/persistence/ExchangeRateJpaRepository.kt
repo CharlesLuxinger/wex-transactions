@@ -11,6 +11,7 @@ interface ExchangeRateJpaRepository : JpaRepository<ExchangeRateJpaEntity, Long>
         SELECT e FROM ExchangeRateJpaEntity e
         WHERE e.sourceCurrency = :sourceCurrency
           AND e.targetCurrency = :targetCurrency
+          AND e.rateSource = :rateSource
           AND e.rateDate <= :rateDate
           AND e.rateDate >= :minDate
         ORDER BY e.rateDate DESC
@@ -19,6 +20,7 @@ interface ExchangeRateJpaRepository : JpaRepository<ExchangeRateJpaEntity, Long>
     fun findNearestPriorRate(
         @Param("sourceCurrency") sourceCurrency: String,
         @Param("targetCurrency") targetCurrency: String,
+        @Param("rateSource") rateSource: String,
         @Param("rateDate") rateDate: LocalDate,
         @Param("minDate") minDate: LocalDate,
     ): List<ExchangeRateJpaEntity>

@@ -29,7 +29,11 @@ class ExchangeRateJpaEntity(
     var exchangeRate: BigDecimal,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,
+    @Column(name = "rate_source", nullable = false, length = 32)
+    var rateSource: String = TREASURY_SOURCE,
 ) {
+    fun isTreasurySource(): Boolean = rateSource == TREASURY_SOURCE
+
     fun toDomain(): ExchangeRate =
         ExchangeRate(
             rate = exchangeRate,
@@ -37,4 +41,8 @@ class ExchangeRateJpaEntity(
             targetCurrency = TargetCurrency(targetCurrency),
             retrievedAt = createdAt,
         )
+
+    companion object {
+        const val TREASURY_SOURCE = "TREASURY"
+    }
 }

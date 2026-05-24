@@ -2,268 +2,209 @@ package com.charlesluxinger.wex_transactions.infra.client.retrieveConverted
 
 import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTest
 import com.charlesluxinger.wex_transactions.config.RestAssuredRequestSupport
-import com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.TreasuryFeignClient
-import com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.TreasuryExchangeRateResponse
-import com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.TreasuryRateRecord
 import com.charlesluxinger.wex_transactions.infra.adapter.persistence.ExchangeRateJpaEntity
 import com.charlesluxinger.wex_transactions.infra.adapter.persistence.ExchangeRateJpaRepository
-import feign.FeignException
-import feign.Request
-import feign.Response
-import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.equalTo
-import org.junit.jupiter.api.BeforeEach
+import org.hamcrest.Matchers.notNullValue
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.anyInt
-import org.mockito.ArgumentMatchers.anyString
-import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import java.math.BigDecimal
-import java.nio.charset.Charset
 import java.time.Instant
 import java.time.LocalDate
 
-/**
- * Integration test WITHOUT StubExchangeRateClientConfig.
- * Uses @MockBean on TreasuryFeignClient to mock the HTTP layer
- * while keeping the real ExchangeRateTreasuryAdapter wired by Spring.
- *
- * Note: StorePurchaseUseCaseImpl calls fetchRate() during purchase creation,
- * so the mock MUST return a valid rate for createPurchase() to succeed.
- */
-@ActiveProfiles("test")
 class RetrieveConvertedControllerV1IntegrationTest :
     AbstractRestApiIntegrationTest(),
     RestAssuredRequestSupport {
-    @MockBean
-    private lateinit var treasuryFeignClient: TreasuryFeignClient
-
     @Autowired
     private lateinit var exchangeRateJpaRepository: ExchangeRateJpaRepository
 
-    @BeforeEach
-    fun cleanDatabase() {
-        exchangeRateJpaRepository.deleteAll()
-    }
-
     @Test
-    @DisplayName("Persisted rate hit returns 200 without Treasury call")
-    fun `persisted rate hit returns 200`() {
-        val rateValue = "5.25"
+    @DisplayName("Retrieve converted uses persisted treasury rate without mock clients")
+    fun `retrieve converted uses persisted treasury rate without mock clients`() {
+        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
 
-        // createPurchase() will call fetchRate() — stub a valid rate so POST succeeds
-        `when`(
-            treasuryFeignClient.fetchRates(
-                fields = anyString(),
-                filter = anyString(),
-                sort = anyString(),
-                pageSize = anyInt(),
-            ),
-        ).thenReturn(
-            TreasuryExchangeRateResponse(
-                data =
-                    listOf(
-                        TreasuryRateRecord(
-                            recordDate = "2026-05-23",
-                            country = "Brazil",
-                            currency = "Real",
-                            countryCurrencyDesc = "Brazil-Real",
-                            exchangeRate = rateValue,
-                        ),
-                    ),
-            ),
-        )
-
-        val purchaseId = createPurchase()
-        val rateDate = LocalDate.parse("2026-05-23")
-
-        // Persist a rate in DB — the GET path should find this instead of calling the client
         exchangeRateJpaRepository.save(
             ExchangeRateJpaEntity(
-                rateDate = rateDate,
+                rateDate = LocalDate.parse("2026-01-16"),
                 sourceCurrency = "USD",
                 targetCurrency = "BRL",
-                exchangeRate = BigDecimal(rateValue),
-                createdAt = Instant.now(),
+                exchangeRate = BigDecimal("5.10"),
+                createdAt = Instant.parse("2026-01-16T12:00:00Z"),
             ),
         )
 
-        given()
+        givenJson()
             .accept(ContentType.JSON)
             .`when`()
             .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
             .then()
             .statusCode(200)
             .body("purchaseId", equalTo(purchaseId.toInt()))
+            .body("exchangeRateUsed", equalTo(5.10f))
+            .body("convertedAmount", equalTo(510.00f))
             .body("targetCurrency", equalTo("BRL"))
-            .body("exchangeRateUsed", equalTo(5.25f))
-            .body("convertedAmount", equalTo(81.38f))
     }
 
     @Test
-    @DisplayName("Treasury fallback success caches the rate and returns 200")
-    fun `treasury fallback caches rate and returns 200`() {
-        val treasuryResponse =
-            TreasuryExchangeRateResponse(
-                data =
-                    listOf(
-                        TreasuryRateRecord(
-                            recordDate = "2026-05-20",
-                            country = "Brazil",
-                            currency = "Real",
-                            countryCurrencyDesc = "Brazil-Real",
-                            exchangeRate = "5.75",
-                        ),
-                    ),
-            )
+    @DisplayName("Retrieve converted returns 422 when no eligible treasury rate exists")
+    fun `retrieve converted returns 422 when no eligible treasury rate exists`() {
+        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
 
-        // Stub used for both createPurchase() and the GET fallback path
-        `when`(
-            treasuryFeignClient.fetchRates(
-                fields = anyString(),
-                filter = anyString(),
-                sort = anyString(),
-                pageSize = anyInt(),
-            ),
-        ).thenReturn(treasuryResponse)
+        exchangeRateJpaRepository.deleteAll()
 
-        val purchaseId = createPurchase()
-
-        given()
-            .accept(ContentType.JSON)
-            .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
-            .then()
-            .statusCode(200)
-            .body("purchaseId", equalTo(purchaseId.toInt()))
-            .body("targetCurrency", equalTo("BRL"))
-            .body("exchangeRateUsed", equalTo(5.75f))
-            .body("convertedAmount", equalTo(89.13f))
-
-        val saved = exchangeRateJpaRepository.findAll()
-        assertThat(saved).isNotEmpty
-    }
-
-    @Test
-    @DisplayName("Treasury fallback with empty data returns 422")
-    fun `treasury fallback empty returns 422`() {
-        // First call (createPurchase): return a valid rate so POST succeeds
-        // Subsequent calls (GET fallback): return empty data so 422 is returned
-        `when`(
-            treasuryFeignClient.fetchRates(
-                fields = anyString(),
-                filter = anyString(),
-                sort = anyString(),
-                pageSize = anyInt(),
-            ),
-        ).thenReturn(
-            TreasuryExchangeRateResponse(
-                data =
-                    listOf(
-                        TreasuryRateRecord(
-                            recordDate = "2026-05-20",
-                            country = "Brazil",
-                            currency = "Real",
-                            countryCurrencyDesc = "Brazil-Real",
-                            exchangeRate = "5.00",
-                        ),
-                    ),
-            ),
-        ).thenReturn(
-            TreasuryExchangeRateResponse(data = null),
-        )
-
-        val purchaseId = createPurchase()
-
-        given()
+        givenJson()
             .accept(ContentType.JSON)
             .`when`()
             .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=EUR")
             .then()
             .statusCode(422)
             .body("title", equalTo("Conversion Unavailable"))
-            .body("detail", equalTo("Exchange rate unavailable: USD \u2192 EUR"))
+            .body("status", equalTo(422))
+            .body("detail", equalTo("Exchange rate unavailable: USD → EUR"))
     }
 
     @Test
-    @DisplayName("Transient Treasury failure returns 500 not 422")
-    fun `transient treasury failure returns 500`() {
-        // First call (createPurchase): return a valid rate so POST succeeds
-        `when`(
-            treasuryFeignClient.fetchRates(
-                fields = anyString(),
-                filter = anyString(),
-                sort = anyString(),
-                pageSize = anyInt(),
-            ),
-        ).thenReturn(
-            TreasuryExchangeRateResponse(
-                data =
-                    listOf(
-                        TreasuryRateRecord(
-                            recordDate = "2026-05-20",
-                            country = "Brazil",
-                            currency = "Real",
-                            countryCurrencyDesc = "Brazil-Real",
-                            exchangeRate = "5.00",
-                        ),
-                    ),
-            ),
-        ).thenThrow(
-            FeignException.errorStatus(
-                "fetchRates",
-                Response
-                    .builder()
-                    .status(500)
-                    .reason("Internal Server Error")
-                    .request(
-                        Request.create(
-                            Request.HttpMethod.GET,
-                            "http://test",
-                            emptyMap(),
-                            null,
-                            Charset.defaultCharset(),
-                            null,
-                        ),
-                    ).headers(emptyMap())
-                    .body("{}", Charset.defaultCharset())
-                    .build(),
-            ),
-        )
+    @DisplayName("Fallback persisted rate is tagged as treasury source")
+    fun `fallback persisted rate is tagged as treasury source`() {
+        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
 
-        val purchaseId = createPurchase()
+        exchangeRateJpaRepository.deleteAll()
 
-        given()
+        givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=EUR")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
             .then()
-            .statusCode(500)
+            .statusCode(200)
+
+        val persistedRates = exchangeRateJpaRepository.findAll()
+        assertThat(persistedRates).hasSize(1)
+        assertThat(persistedRates.first().rateSource).isEqualTo(ExchangeRateJpaEntity.TREASURY_SOURCE)
     }
 
-    private fun createPurchase(): Long {
-        val createResponse =
-            givenJson()
-                .body(
-                    mapOf(
-                        "description" to "Lunch at Restaurant",
-                        "transactionAmount" to 15.50,
-                        "transactionCurrency" to "USD",
-                        "transactionDate" to "2026-05-23T12:00:00Z",
-                        "targetCurrency" to "BRL",
-                    ),
-                ).`when`()
-                .post("/api/v1/purchases")
-                .then()
-                .statusCode(201)
-                .extract()
-                .path<Int>("id")
+    @Test
+    @DisplayName("Retrieve converted returns 404 for missing purchase")
+    fun `retrieve converted returns 404 for missing purchase`() {
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/999999/converted?targetCurrency=BRL")
+            .then()
+            .statusCode(404)
+            .body("title", equalTo("Not Found"))
+            .body("detail", equalTo("Purchase with ID 999999 not found"))
+    }
 
-        return createResponse.toLong()
+    @Test
+    @DisplayName("Stored purchase conversion is rounded to 2 decimals")
+    fun `stored purchase conversion is rounded to 2 decimals`() {
+        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z", BigDecimal("10.005"))
+
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .then()
+            .statusCode(200)
+            .body("convertedAmount", equalTo(51.03f))
+            .body("exchangeRateUsed", notNullValue())
+    }
+
+    private fun createPurchase(
+        targetCurrency: String,
+        transactionDate: String,
+        amount: BigDecimal = BigDecimal("100.00"),
+    ): Long =
+        givenJson()
+            .body(
+                mapOf(
+                    "description" to "Lunch at Restaurant",
+                    "transactionAmount" to amount,
+                    "transactionCurrency" to "USD",
+                    "transactionDate" to transactionDate,
+                    "targetCurrency" to targetCurrency,
+                ),
+            ).`when`()
+            .post("/api/v1/purchases")
+            .then()
+            .statusCode(201)
+            .extract()
+            .path<Int>("id")
+            .toLong()
+
+    companion object {
+        private val server = MockWebServer()
+
+        @JvmStatic
+        @BeforeAll
+        fun startServer() {
+            server.dispatcher = FixedTreasuryDispatcher()
+            server.start()
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun stopServer() {
+            server.shutdown()
+        }
+
+        @JvmStatic
+        @DynamicPropertySource
+        fun registerProperties(registry: DynamicPropertyRegistry) {
+            registry.add("treasury.api.base-url") {
+                server
+                    .url("/services/api/fiscal_service/v1/accounting/od")
+                    .toString()
+                    .removeSuffix("/")
+            }
+        }
+    }
+
+    private class FixedTreasuryDispatcher : Dispatcher() {
+        override fun dispatch(request: RecordedRequest): MockResponse {
+            val isRatesPath = request.path.orEmpty().contains("/rates_of_exchange")
+            val filter = request.requestUrl?.queryParameter("filter").orEmpty()
+            val eurRequested = filter.contains("EUR", ignoreCase = true)
+
+            val responseBody =
+                if (!isRatesPath) {
+                    null
+                } else if (eurRequested) {
+                    "{\"data\":[]}"
+                } else {
+                    """
+                    {
+                      "data": [
+                        {
+                          "record_date": "2026-01-15",
+                          "country": "Brazil",
+                          "currency": "Real",
+                          "country_currency_desc": "Brazil-Real",
+                          "exchange_rate": "5.10"
+                        }
+                      ]
+                    }
+                    """.trimIndent()
+                }
+
+            val status = if (isRatesPath) 200 else 404
+            val response = MockResponse().setResponseCode(status)
+            if (responseBody != null) {
+                response.addHeader("Content-Type", "application/json")
+                response.setBody(responseBody)
+            }
+            return response
+        }
     }
 }

@@ -27,13 +27,14 @@ class TreasuryFeignConfigTest {
     private fun buildResponse(
         status: Int,
         reason: String = "",
+        headers: Map<String, Collection<String>> = emptyMap(),
     ): Response =
         Response
             .builder()
             .status(status)
             .reason(reason)
             .request(request)
-            .headers(emptyMap())
+            .headers(headers)
             .body("""{"error":"test"}""", Charset.defaultCharset())
             .build()
 
@@ -77,5 +78,21 @@ class TreasuryFeignConfigTest {
 
         assertThat(result).isInstanceOf(FeignException::class.java)
         assertThat(result).isNotInstanceOf(RetryableException::class.java)
+    }
+
+    @Test
+    @DisplayName("Error decoder maps retry-after header into RetryableException")
+    fun `error decoder maps retry after header`() {
+        val result =
+            decoder.decode(
+                "test",
+                buildResponse(
+                    status = 429,
+                    headers = mapOf("retry-after" to listOf("2")),
+                ),
+            )
+
+        assertThat(result).isInstanceOf(RetryableException::class.java)
+        assertThat((result as RetryableException).retryAfter()).isEqualTo(2L)
     }
 }

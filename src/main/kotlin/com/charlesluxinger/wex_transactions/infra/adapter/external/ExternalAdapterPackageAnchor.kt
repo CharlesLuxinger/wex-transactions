@@ -1,3 +1,0 @@
-package com.charlesluxinger.wex_transactions.infra.adapter.external
-
-internal object ExternalAdapterPackageAnchor

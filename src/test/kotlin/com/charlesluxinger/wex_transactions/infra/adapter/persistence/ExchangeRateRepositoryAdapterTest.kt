@@ -5,7 +5,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.verify
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -32,6 +34,7 @@ class ExchangeRateRepositoryAdapterTest {
             exchangeRateJpaRepository.findNearestPriorRate(
                 sourceCurrency = "USD",
                 targetCurrency = "BRL",
+                rateSource = ExchangeRateJpaEntity.TREASURY_SOURCE,
                 rateDate = rateDate,
                 minDate = rateDate.minusMonths(6),
             ),
@@ -59,6 +62,7 @@ class ExchangeRateRepositoryAdapterTest {
             exchangeRateJpaRepository.findNearestPriorRate(
                 sourceCurrency = "USD",
                 targetCurrency = "BRL",
+                rateSource = ExchangeRateJpaEntity.TREASURY_SOURCE,
                 rateDate = rateDate,
                 minDate = rateDate.minusMonths(6),
             ),
@@ -73,5 +77,39 @@ class ExchangeRateRepositoryAdapterTest {
             )
 
         assertThat(result).isNull()
+    }
+
+    @Test
+    @DisplayName("save persists treasury rate source")
+    fun `save persists treasury rate source`() {
+        val rateDate = LocalDate.now()
+        val source = TargetCurrency("USD")
+        val target = TargetCurrency("BRL")
+        val domainRate =
+            com.charlesluxinger.wex_transactions.domain.model.ExchangeRate(
+                rate = BigDecimal("5.10"),
+                sourceCurrency = source,
+                targetCurrency = target,
+                retrievedAt = Instant.now(),
+            )
+
+        val persisted =
+            ExchangeRateJpaEntity(
+                id = 10L,
+                rateDate = rateDate,
+                sourceCurrency = "USD",
+                targetCurrency = "BRL",
+                exchangeRate = BigDecimal("5.10"),
+                createdAt = Instant.now(),
+                rateSource = ExchangeRateJpaEntity.TREASURY_SOURCE,
+            )
+
+        `when`(exchangeRateJpaRepository.save(org.mockito.ArgumentMatchers.any())).thenReturn(persisted)
+
+        adapter.save(domainRate, rateDate)
+
+        val captor = ArgumentCaptor.forClass(ExchangeRateJpaEntity::class.java)
+        verify(exchangeRateJpaRepository).save(captor.capture())
+        assertThat(captor.value.rateSource).isEqualTo(ExchangeRateJpaEntity.TREASURY_SOURCE)
     }
 }

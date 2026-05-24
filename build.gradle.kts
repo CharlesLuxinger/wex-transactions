@@ -58,6 +58,7 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
     testImplementation("io.rest-assured:rest-assured")
+    testImplementation("com.squareup.okhttp3:mockwebserver")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
