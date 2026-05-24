@@ -14,6 +14,5 @@ interface ExchangeRateClientPort {
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
-        maxWindowMonths: Long,
     ): ExchangeRate?
 }

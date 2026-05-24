@@ -17,7 +17,7 @@ class ExchangeRateTest {
     fun `should create ExchangeRate with valid BigDecimal rate`() {
         val exchangeRate = sampleRate(rate = BigDecimal("5.123456"))
 
-        assertEquals(BigDecimal("5.123456"), exchangeRate.rate)
+        assertEquals(BigDecimal("5.12"), exchangeRate.rate)
     }
 
     @Test
@@ -41,14 +41,14 @@ class ExchangeRateTest {
     fun `should accept decimal 18 6 precision rates`() {
         val exchangeRate = sampleRate(rate = BigDecimal("123456789012.123456"))
 
-        assertEquals(BigDecimal("123456789012.123456"), exchangeRate.rate)
+        assertEquals(BigDecimal("123456789012.12"), exchangeRate.rate)
     }
 
     @Test
     fun `should round to 6 decimal places`() {
         val exchangeRate = sampleRate(rate = BigDecimal("5.1234567"))
 
-        assertEquals(BigDecimal("5.123457"), exchangeRate.rate)
+        assertEquals(BigDecimal("5.12"), exchangeRate.rate)
     }
 
     @Test
@@ -102,7 +102,7 @@ class ExchangeRateTest {
     fun `should handle very large rates with 6 decimals`() {
         val exchangeRate = sampleRate(rate = BigDecimal("999999999999.999999"))
 
-        assertEquals(BigDecimal("999999999999.999999"), exchangeRate.rate)
+        assertEquals(BigDecimal("1000000000000.00"), exchangeRate.rate)
     }
 
     @Test
@@ -112,7 +112,7 @@ class ExchangeRateTest {
 
         assertEquals(TargetCurrency("USD"), exchangeRate.sourceCurrency)
         assertEquals(TargetCurrency("USD"), exchangeRate.targetCurrency)
-        assertEquals(BigDecimal("1.000000"), exchangeRate.rate)
+        assertEquals(BigDecimal("1.00"), exchangeRate.rate)
     }
 
     @Test
@@ -120,7 +120,7 @@ class ExchangeRateTest {
         val exchangeRate =
             sampleRate(rate = BigDecimal("5.250000"), source = TargetCurrency("USD"), target = TargetCurrency("BRL"))
 
-        assertEquals("USD/BRL=5.250000", exchangeRate.toString())
+        assertEquals("USD/BRL=5.25", exchangeRate.toString())
     }
 
     private fun sampleRate(

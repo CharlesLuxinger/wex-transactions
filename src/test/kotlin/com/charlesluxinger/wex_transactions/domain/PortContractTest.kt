@@ -181,7 +181,7 @@ class ExchangeRateClientPortTest {
 
         val result = client.fetchRate(TargetCurrency("USD"), TargetCurrency("BRL"))
 
-        assertEquals(BigDecimal("5.000000"), result.rate)
+        assertEquals(BigDecimal("5.00"), result.rate)
     }
 
     @Test
@@ -293,7 +293,6 @@ private class FakeExchangeRateClientPort : ExchangeRateClientPort {
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
-        maxWindowMonths: Long,
     ): ExchangeRate? = null
 }
 

@@ -175,7 +175,6 @@ class StubExchangeRateClientConfig {
                 sourceCurrency: TargetCurrency,
                 targetCurrency: TargetCurrency,
                 rateDate: java.time.LocalDate,
-                maxWindowMonths: Long,
             ): ExchangeRate? = null
         }
 }

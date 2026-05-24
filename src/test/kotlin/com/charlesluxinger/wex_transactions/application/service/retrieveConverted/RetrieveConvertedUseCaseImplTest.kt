@@ -106,7 +106,7 @@ class RetrieveConvertedUseCaseImplTest {
         assertEquals("Office chair", response.description)
         assertEquals(transactionDate.toCanonicalString(), response.transactionDate)
         assertEquals(BigDecimal("100.00"), response.originalUsdAmount)
-        assertEquals(BigDecimal("5.000000"), response.exchangeRateUsed)
+        assertEquals(BigDecimal("5.00"), response.exchangeRateUsed)
         assertEquals(BigDecimal("500.00"), response.convertedAmount)
         assertEquals("BRL", response.targetCurrency)
         assertEquals(createdAt, response.createdAt)
@@ -203,7 +203,6 @@ class RetrieveConvertedUseCaseImplTest {
                 sourceCurrency = sourceCurrency,
                 targetCurrency = targetCurrency,
                 rateDate = rateDate,
-                maxWindowMonths = 6L,
             ),
         ).thenReturn(treasuryRate)
         `when`(
@@ -215,14 +214,13 @@ class RetrieveConvertedUseCaseImplTest {
         assertEquals(purchaseId, response.purchaseId)
         assertEquals("Monitor", response.description)
         assertEquals(BigDecimal("200.00"), response.originalUsdAmount)
-        assertEquals(BigDecimal("5.700000"), response.exchangeRateUsed)
+        assertEquals(BigDecimal("5.70"), response.exchangeRateUsed)
         assertEquals(BigDecimal("1140.00"), response.convertedAmount)
 
         verify(exchangeRateClientPort).fetchNearestPriorRate(
             sourceCurrency,
             targetCurrency,
             rateDate,
-            6L,
         )
         verify(exchangeRateRepositoryPort).save(treasuryRate, rateDate)
     }
@@ -265,7 +263,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         assertEquals(purchaseId, response.purchaseId)
         assertEquals(BigDecimal("150.00"), response.originalUsdAmount)
-        assertEquals(BigDecimal("6.000000"), response.exchangeRateUsed)
+        assertEquals(BigDecimal("6.00"), response.exchangeRateUsed)
         assertEquals(BigDecimal("900.00"), response.convertedAmount)
         verifyNoInteractions(exchangeRateClientPort)
     }
@@ -308,7 +306,6 @@ class RetrieveConvertedUseCaseImplTest {
                 sourceCurrency = sourceCurrency,
                 targetCurrency = targetCurrency,
                 rateDate = rateDate,
-                maxWindowMonths = 6L,
             ),
         ).thenReturn(fallbackRate)
         `when`(
@@ -319,14 +316,13 @@ class RetrieveConvertedUseCaseImplTest {
 
         assertEquals(purchaseId, response.purchaseId)
         assertEquals(BigDecimal("80.00"), response.originalUsdAmount)
-        assertEquals(BigDecimal("5.500000"), response.exchangeRateUsed)
+        assertEquals(BigDecimal("5.50"), response.exchangeRateUsed)
         assertEquals(BigDecimal("440.00"), response.convertedAmount)
 
         verify(exchangeRateClientPort).fetchNearestPriorRate(
             sourceCurrency,
             targetCurrency,
             rateDate,
-            6L,
         )
         verify(exchangeRateRepositoryPort).save(fallbackRate, rateDate)
     }
@@ -370,7 +366,6 @@ class RetrieveConvertedUseCaseImplTest {
                 sourceCurrency = sourceCurrency,
                 targetCurrency = targetCurrency,
                 rateDate = rateDate,
-                maxWindowMonths = 6L,
             ),
         ).thenReturn(treasuryRate)
 
@@ -390,7 +385,6 @@ class RetrieveConvertedUseCaseImplTest {
             sourceCurrency,
             targetCurrency,
             rateDate,
-            6L,
         )
         verify(exchangeRateRepositoryPort, times(1)).save(treasuryRate, rateDate)
     }

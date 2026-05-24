@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestParam
 
 @FeignClient(
     name = "treasury-rates",
-    url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od",
+    url = "\${treasury.api.base-url}",
     configuration = [TreasuryFeignConfig::class],
 )
 interface TreasuryFeignClient {

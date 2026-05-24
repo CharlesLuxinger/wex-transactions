@@ -42,7 +42,6 @@ class RetrieveConvertedUseCaseImpl(
                         sourceCurrency = sourceCurrency,
                         targetCurrency = targetCurrency,
                         rateDate = rateDate,
-                        maxWindowMonths = MAX_WINDOW_MONTHS,
                     )?.also { fetchedRate ->
                         exchangeRateRepositoryPort.save(fetchedRate, rateDate)
                     } ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)

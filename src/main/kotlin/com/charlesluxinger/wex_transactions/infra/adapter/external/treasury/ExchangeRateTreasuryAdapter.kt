@@ -4,11 +4,9 @@ import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import org.springframework.stereotype.Component
-import java.math.BigDecimal
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Currency
-import java.util.Locale
+import java.util.Locale.US
 
 @Component
 class ExchangeRateTreasuryAdapter(
@@ -17,47 +15,26 @@ class ExchangeRateTreasuryAdapter(
     override fun fetchRate(
         from: TargetCurrency,
         to: TargetCurrency,
-    ): ExchangeRate {
-        val rate =
-            fetchNearestPriorRate(from, to, LocalDate.now(), DEFAULT_WINDOW_MONTHS)
-                ?: throw IllegalStateException("No exchange rate available for $from -> $to")
-        return rate
-    }
+    ): ExchangeRate =
+        fetchNearestPriorRate(from, to, LocalDate.now())
+            ?: throw IllegalStateException("No exchange rate available for $from -> $to")
 
     override fun fetchNearestPriorRate(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
-        maxWindowMonths: Long,
     ): ExchangeRate? {
-        val minDate = rateDate.minusMonths(maxWindowMonths)
-        val filter = "record_date:lte:$rateDate,record_date:gte:$minDate"
-        val fields = "record_date,country,currency,country_currency_desc,exchange_rate"
-        val sort = "-record_date"
+        val minDate = rateDate.minusMonths(DEFAULT_WINDOW_MONTHS)
 
-        val response =
-            treasuryFeignClient.fetchRates(
-                fields = fields,
-                filter = filter,
-                sort = sort,
-                pageSize = PAGE_SIZE,
-            )
-
-        val matched = response.data?.let { matchRate(targetCurrency, it) } ?: return null
-
-        val rateValue = matched.exchangeRate?.let { BigDecimal(it) }
-        val recordDate =
-            matched.recordDate?.let { LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE) }
-
-        return if (rateValue != null && recordDate != null) {
-            ExchangeRate(
-                rate = rateValue,
-                sourceCurrency = sourceCurrency,
-                targetCurrency = targetCurrency,
-                retrievedAt = recordDate.atStartOfDay(DEFAULT_ZONE).toInstant(),
-            )
-        } else {
-            null
+        return treasuryFeignClient.fetchRates(
+            fields = FIELDS,
+            filter = FILTER_FORMAT.format(rateDate, minDate),
+            sort = SORT,
+            pageSize = PAGE_SIZE,
+        ).data?.let { data ->
+            val matched = matchRate(targetCurrency, data) ?: return@let null
+            if (!matched.hasValidExchangeRate || !matched.hasValidRecordDate) return@let null
+            ExchangeRate(matched.rate, sourceCurrency, targetCurrency, matched.retrievedAt)
         }
     }
 
@@ -66,10 +43,11 @@ class ExchangeRateTreasuryAdapter(
         records: List<TreasuryRateRecord>,
     ): TreasuryRateRecord? {
         val isoCurrency = runCatching { Currency.getInstance(target.code) }.getOrNull() ?: return null
-        val displayName = isoCurrency.getDisplayName(Locale.US).lowercase()
+        val displayName = isoCurrency.getDisplayName(US).lowercase()
 
         return records.firstOrNull { record ->
-            val desc = record.countryCurrencyDesc?.lowercase() ?: return@firstOrNull false
+            if (!record.hasValidDescription) return@firstOrNull false
+            val desc = record.countryCurrencyDesc.lowercase()
             val currencyPart = desc.substringAfter("-")
             displayName.contains(currencyPart) ||
                 desc.contains(displayName.split(" ").lastOrNull() ?: "")
@@ -79,6 +57,8 @@ class ExchangeRateTreasuryAdapter(
     companion object {
         private const val PAGE_SIZE = 10_000
         private const val DEFAULT_WINDOW_MONTHS = 6L
-        private val DEFAULT_ZONE = java.time.ZoneOffset.UTC
+        private const val FIELDS = "record_date,country,currency,country_currency_desc,exchange_rate"
+        private const val FILTER_FORMAT = "record_date:lte:%s,record_date:gte:%s"
+        private const val SORT = "-record_date"
     }
 }

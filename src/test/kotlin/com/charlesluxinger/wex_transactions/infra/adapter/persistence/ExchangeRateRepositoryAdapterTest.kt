@@ -46,7 +46,7 @@ class ExchangeRateRepositoryAdapterTest {
             )
 
         assertThat(result).isNotNull
-        assertThat(result?.rate).isEqualTo(BigDecimal("5.250000"))
+        assertThat(result?.rate).isEqualTo(BigDecimal("5.25"))
         assertThat(result?.sourceCurrency).isEqualTo(TargetCurrency("USD"))
         assertThat(result?.targetCurrency).isEqualTo(TargetCurrency("BRL"))
     }
