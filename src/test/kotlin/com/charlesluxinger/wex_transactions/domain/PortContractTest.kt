@@ -90,6 +90,15 @@ class RetrieveConvertedQueryPortTest {
         val exchangeRateRepository = InMemoryExchangeRateRepositoryPort()
         val purchase = samplePurchase(id = 123L)
         repository.save(purchase)
+        exchangeRateRepository.save(
+            ExchangeRate(
+                BigDecimal("5.000000"),
+                purchase.transactionCurrency,
+                TargetCurrency("BRL"),
+                Instant.parse("2026-01-10T10:00:00Z"),
+            ),
+            purchase.transactionDate.value.toLocalDate(),
+        )
         val port: RetrieveConvertedQueryPort = InMemoryRetrieveConvertedQueryPort(repository, exchangeRateRepository)
 
         val result = port.retrieveConverted(RetrieveConvertedQuery(123L, "BRL"))
@@ -172,7 +181,7 @@ class ExchangeRateClientPortTest {
 
         val result = client.fetchRate(TargetCurrency("USD"), TargetCurrency("BRL"))
 
-        assertEquals(BigDecimal("5.000000"), result.rate)
+        assertEquals(BigDecimal("5.00"), result.rate)
     }
 
     @Test
@@ -250,21 +259,21 @@ private class InMemoryPurchaseRepositoryPort : PurchaseRepositoryPort {
 }
 
 private class InMemoryExchangeRateRepositoryPort : ExchangeRateRepositoryPort {
+    private val storage = mutableListOf<ExchangeRate>()
+
     override fun findNearestPriorRate(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
         maxWindowMonths: Long,
-    ): ExchangeRate? {
-        if (sourceCurrency == TargetCurrency("USD") && targetCurrency == TargetCurrency("BRL")) {
-            return ExchangeRate(
-                BigDecimal("5.000000"),
-                sourceCurrency,
-                targetCurrency,
-                Instant.parse("2026-01-10T10:00:00Z"),
-            )
-        }
-        return null
+    ): ExchangeRate? = storage.find { it.sourceCurrency == sourceCurrency && it.targetCurrency == targetCurrency }
+
+    override fun save(
+        exchangeRate: ExchangeRate,
+        rateDate: LocalDate,
+    ): ExchangeRate {
+        storage.add(exchangeRate)
+        return exchangeRate
     }
 }
 
@@ -279,6 +288,12 @@ private class FakeExchangeRateClientPort : ExchangeRateClientPort {
 
         throw RateUnavailableException(from.code, to.code)
     }
+
+    override fun fetchNearestPriorRate(
+        sourceCurrency: TargetCurrency,
+        targetCurrency: TargetCurrency,
+        rateDate: LocalDate,
+    ): ExchangeRate? = null
 }
 
 private fun samplePurchase(id: Long): Purchase =

@@ -11,4 +11,9 @@ interface ExchangeRateRepositoryPort {
         rateDate: LocalDate,
         maxWindowMonths: Long,
     ): ExchangeRate?
+
+    fun save(
+        exchangeRate: ExchangeRate,
+        rateDate: LocalDate,
+    ): ExchangeRate
 }

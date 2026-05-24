@@ -4,6 +4,7 @@ import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTes
 import com.charlesluxinger.wex_transactions.config.RestAssuredRequestSupport
 import com.charlesluxinger.wex_transactions.infra.adapter.persistence.ExchangeRateJpaEntity
 import com.charlesluxinger.wex_transactions.infra.adapter.persistence.ExchangeRateJpaRepository
+import com.charlesluxinger.wex_transactions.infra.client.purchase.StubExchangeRateClientConfig
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import org.hamcrest.Matchers.equalTo
@@ -11,11 +12,15 @@ import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.ActiveProfiles
 import java.math.BigDecimal
 import java.time.Instant.now
 import java.time.LocalDate
-import org.springframework.beans.factory.annotation.Autowired
 
+@ActiveProfiles("test")
+@Import(StubExchangeRateClientConfig::class)
 class RetrieveConvertedControllerV1Test :
     AbstractRestApiIntegrationTest(),
     RestAssuredRequestSupport {
@@ -26,7 +31,7 @@ class RetrieveConvertedControllerV1Test :
     fun seedExchangeRate() {
         exchangeRateJpaRepository.save(
             ExchangeRateJpaEntity(
-                rateDate = LocalDate.now(),
+                rateDate = LocalDate.parse("2026-05-23"),
                 sourceCurrency = "USD",
                 targetCurrency = "BRL",
                 exchangeRate = BigDecimal("5.25"),
@@ -82,6 +87,21 @@ class RetrieveConvertedControllerV1Test :
             .statusCode(422)
             .body("title", equalTo("Conversion Unavailable"))
             .body("detail", equalTo("Exchange rate unavailable: USD → EUR"))
+    }
+
+    @Test
+    @DisplayName("Should return 400 when target currency is invalid")
+    fun `should return 400 when target currency is invalid`() {
+        val purchaseId = createPurchase()
+
+        given()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=INVALID")
+            .then()
+            .statusCode(400)
+            .body("title", equalTo("Invalid Currency"))
+            .body("detail", equalTo("Invalid currency code: INVALID"))
     }
 
     private fun createPurchase(): Long {

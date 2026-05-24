@@ -1,3 +1,7 @@
+treasury:
+  api:
+    base-url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od
+
 spring:
   application:
     name: wex-transactions
@@ -14,3 +18,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  cloud:
+    openfeign:
+      client:
+        config:
+          treasury-rates:
+            connect-timeout: 1000
+            read-timeout: 3000

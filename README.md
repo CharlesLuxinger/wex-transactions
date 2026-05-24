@@ -22,7 +22,7 @@ docker compose logs app
 docker compose down -v
 ```
 
-> For a detailed step-by-step runbook, including service inspection, test execution, and failure recovery, see [docs/run-and-test-guide.md](docs/run-and-test-guide.md).
+> For a detailed step-by-step runbook, including service inspection, test execution, and failure recovery, see [docs/run-and-test-guide.md](.docs/run-and-test-guide.md).
 
 ## Local Development Without Docker
 1. Clone the repository:
