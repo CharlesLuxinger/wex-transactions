@@ -5,7 +5,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
 class TreasuryRateRecordTest {
-
     @Test
     @DisplayName("Record with null-string exchangeRate has hasValidExchangeRate = false")
     fun `null exchangeRate marks hasValidExchangeRate false`() {

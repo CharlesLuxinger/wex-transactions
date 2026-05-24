@@ -26,16 +26,18 @@ class ExchangeRateTreasuryAdapter(
     ): ExchangeRate? {
         val minDate = rateDate.minusMonths(DEFAULT_WINDOW_MONTHS)
 
-        return treasuryFeignClient.fetchRates(
-            fields = FIELDS,
-            filter = FILTER_FORMAT.format(rateDate, minDate),
-            sort = SORT,
-            pageSize = PAGE_SIZE,
-        ).data?.let { data ->
-            val matched = matchRate(targetCurrency, data) ?: return@let null
-            if (!matched.hasValidExchangeRate || !matched.hasValidRecordDate) return@let null
-            ExchangeRate(matched.rate, sourceCurrency, targetCurrency, matched.retrievedAt)
-        }
+        return treasuryFeignClient
+            .fetchRates(
+                fields = FIELDS,
+                filter = FILTER_FORMAT.format(rateDate, minDate),
+                sort = SORT,
+                pageSize = PAGE_SIZE,
+            ).data
+            ?.let { data ->
+                val matched = matchRate(targetCurrency, data) ?: return@let null
+                if (!matched.hasValidExchangeRate || !matched.hasValidRecordDate) return@let null
+                ExchangeRate(matched.rate, sourceCurrency, targetCurrency, matched.retrievedAt)
+            }
     }
 
     private fun matchRate(
