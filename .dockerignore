@@ -1,0 +1,9 @@
+build/
+*.md
+.git/
+.gradle/
+.sisyphus/
+.agents/
+graphify-out/
+badges/
+config/
