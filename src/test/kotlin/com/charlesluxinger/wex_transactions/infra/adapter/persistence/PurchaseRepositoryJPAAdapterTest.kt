@@ -58,34 +58,37 @@ class PurchaseRepositoryJPAAdapterTest {
     @DisplayName("save persists and returns purchase")
     fun `save should persist and return purchase`() {
         val now = Instant.now()
-        val purchase = Purchase(
-            id = 1L,
-            description = "Test purchase",
-            transactionAmount = BigDecimal("100.00"),
-            transactionCurrency = TargetCurrency("USD"),
-            transactionDate = TransactionDate("2026-01-10T15:30:45Z"),
-            targetCurrency = TargetCurrency("BRL"),
-            exchangeRate = ExchangeRate(
-                rate = BigDecimal("5.50"),
-                sourceCurrency = TargetCurrency("USD"),
+        val purchase =
+            Purchase(
+                id = 1L,
+                description = "Test purchase",
+                transactionAmount = BigDecimal("100.00"),
+                transactionCurrency = TargetCurrency("USD"),
+                transactionDate = TransactionDate("2026-01-10T15:30:45Z"),
                 targetCurrency = TargetCurrency("BRL"),
-                retrievedAt = now,
-            ),
-            convertedAmount = BigDecimal("550.00"),
-            createdAt = now,
-        )
+                exchangeRate =
+                    ExchangeRate(
+                        rate = BigDecimal("5.50"),
+                        sourceCurrency = TargetCurrency("USD"),
+                        targetCurrency = TargetCurrency("BRL"),
+                        retrievedAt = now,
+                    ),
+                convertedAmount = BigDecimal("550.00"),
+                createdAt = now,
+            )
 
-        val savedEntity = PurchaseJpaEntity(
-            id = 1L,
-            description = "Test purchase",
-            transactionAmount = BigDecimal("100.00"),
-            transactionCurrency = "USD",
-            transactionDate = now,
-            targetCurrency = "BRL",
-            exchangeRate = BigDecimal("5.50"),
-            convertedAmount = BigDecimal("550.00"),
-            createdAt = now,
-        )
+        val savedEntity =
+            PurchaseJpaEntity(
+                id = 1L,
+                description = "Test purchase",
+                transactionAmount = BigDecimal("100.00"),
+                transactionCurrency = "USD",
+                transactionDate = now,
+                targetCurrency = "BRL",
+                exchangeRate = BigDecimal("5.50"),
+                convertedAmount = BigDecimal("550.00"),
+                createdAt = now,
+            )
 
         `when`(springDataRepository.save(any<PurchaseJpaEntity>())).thenReturn(savedEntity)
 
