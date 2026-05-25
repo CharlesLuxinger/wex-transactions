@@ -67,28 +67,3 @@ class RedisExchangeRateCacheAdapter(
         private val logger = LoggerFactory.getLogger(RedisExchangeRateCacheAdapter::class.java)
     }
 }
-
-data class ExchangeRateCacheValue(
-    val rate: String,
-    val sourceCurrency: String,
-    val targetCurrency: String,
-    val retrievedAt: String,
-) {
-    fun toDomain(): ExchangeRate =
-        ExchangeRate(
-            rate = rate.toBigDecimal(),
-            sourceCurrency = TargetCurrency(sourceCurrency),
-            targetCurrency = TargetCurrency(targetCurrency),
-            retrievedAt = java.time.Instant.parse(retrievedAt),
-        )
-
-    companion object {
-        fun fromDomain(exchangeRate: ExchangeRate): ExchangeRateCacheValue =
-            ExchangeRateCacheValue(
-                rate = exchangeRate.rate.toPlainString(),
-                sourceCurrency = exchangeRate.sourceCurrency.code,
-                targetCurrency = exchangeRate.targetCurrency.code,
-                retrievedAt = exchangeRate.retrievedAt.toString(),
-            )
-    }
-}
