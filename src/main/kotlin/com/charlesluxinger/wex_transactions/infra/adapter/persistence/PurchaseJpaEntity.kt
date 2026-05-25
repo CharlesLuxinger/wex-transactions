@@ -24,7 +24,7 @@ class PurchaseJpaEntity(
     var id: Long? = null,
     @Column(name = "description", nullable = false, length = 50)
     var description: String,
-    @Column(name = "transaction_amount", nullable = false, precision = 18, scale = 6)
+    @Column(name = "transaction_amount", nullable = false, precision = 18, scale = 2)
     var transactionAmount: BigDecimal,
     @Column(name = "transaction_currency", nullable = false, length = 3)
     var transactionCurrency: String,
@@ -32,9 +32,9 @@ class PurchaseJpaEntity(
     var transactionDate: Instant,
     @Column(name = "target_currency", nullable = false, length = 3)
     var targetCurrency: String,
-    @Column(name = "exchange_rate", nullable = false, precision = 18, scale = 6)
+    @Column(name = "exchange_rate", nullable = false, precision = 18, scale = 2)
     var exchangeRate: BigDecimal,
-    @Column(name = "converted_amount", nullable = false, precision = 18, scale = 6)
+    @Column(name = "converted_amount", nullable = false, precision = 18, scale = 2)
     var convertedAmount: BigDecimal,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,

@@ -21,6 +21,7 @@ class Purchase(
             "Description must have at most $MAX_DESCRIPTION_LENGTH characters"
         }
         require(transactionAmount > BigDecimal.ZERO) { "Transaction amount must be positive" }
+        require(transactionAmount.stripTrailingZeros().scale() <= 2) { "Transaction amount must have at most 2 decimal places" }
         require(convertedAmount >= BigDecimal.ZERO) { "Converted amount must be zero or positive" }
     }
 

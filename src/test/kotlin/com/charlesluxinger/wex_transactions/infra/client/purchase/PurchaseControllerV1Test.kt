@@ -143,9 +143,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             mapOf(
                 "description" to "Book",
                 "transactionAmount" to 10.00,
-                "transactionCurrency" to "INVALID",
+                "transactionCurrency" to "USD",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "EUR",
+                "targetCurrency" to "INVALID",
             )
 
         givenJson()
@@ -155,7 +155,29 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .then()
             .statusCode(400)
             .body("title", equalTo("Invalid Currency"))
-            .body("detail", equalTo("Invalid currency code: INVALID"))
+            .body("detail", equalTo("Invalid currency code"))
+    }
+
+    @Test
+    @DisplayName("Should fail when transaction currency is not USD")
+    fun `should fail when transaction currency is not USD`() {
+        val payload =
+            mapOf(
+                "description" to "Book",
+                "transactionAmount" to 10.00,
+                "transactionCurrency" to "EUR",
+                "transactionDate" to "2026-05-23T12:00:00Z",
+                "targetCurrency" to "BRL",
+            )
+
+        givenJson()
+            .body(payload)
+            .`when`()
+            .post("/api/v1/purchases")
+            .then()
+            .statusCode(400)
+            .body("title", equalTo("Bad Request"))
+            .body("detail", equalTo("Transaction currency must be USD"))
     }
 }
 

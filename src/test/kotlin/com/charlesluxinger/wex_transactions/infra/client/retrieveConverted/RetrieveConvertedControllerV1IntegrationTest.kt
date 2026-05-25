@@ -183,7 +183,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
             .then()
             .statusCode(200)
-            .body("convertedAmount", equalTo(51.03f))
+            .body("convertedAmount", equalTo(51.05f))
     }
 
     private fun createPurchase(

@@ -1,6 +1,7 @@
 package com.charlesluxinger.wex_transactions.architecture
 
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 /**
@@ -23,9 +24,8 @@ class ControllerBoundaryTest : ArchitectureTest() {
                 ) &&
                     it.name.contains(".client")
             }
-        if (!infraClientExists) {
-            return
-        }
+        assertThat(infraClientExists).isTrue()
+
         val rule =
             noClasses()
                 .that()
@@ -47,9 +47,8 @@ class ControllerBoundaryTest : ArchitectureTest() {
                 ) &&
                     it.name.contains(".client")
             }
-        if (!infraClientExists) {
-            return
-        }
+        assertThat(infraClientExists).isTrue()
+
         val rule =
             noClasses()
                 .that()

@@ -2,6 +2,7 @@ package com.charlesluxinger.wex_transactions.architecture
 
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 /**
@@ -18,9 +19,8 @@ class UseCaseOwnershipTest : ArchitectureTest() {
     fun `use case implementations must be in application layer`() {
         val allClasses = importClasses()
         val useCaseImpls = allClasses.filter { it.simpleName.contains("UseCaseImpl") }
-        if (useCaseImpls.isEmpty()) {
-            return
-        }
+        assertThat(useCaseImpls).isNotEmpty
+
         val rule =
             classes()
                 .that()
@@ -34,32 +34,16 @@ class UseCaseOwnershipTest : ArchitectureTest() {
     @Test
     fun `domain layer must not contain use case implementations`() {
         val domainClasses = importClassesFrom(DOMAIN_PACKAGE)
-        if (domainClasses.isEmpty()) return
+        assertThat(domainClasses).isNotEmpty
         val useCaseInDomain = domainClasses.filter { it.simpleName.contains("UseCaseImpl") }
-        if (useCaseInDomain.isEmpty()) return
-        val rule =
-            noClasses()
-                .that()
-                .haveNameMatching(".*UseCaseImpl.*")
-                .should()
-                .resideInAnyPackage(DOMAIN_PACKAGE)
-                .because("Domain layer must not contain use case implementations")
-        rule.check(domainClasses)
+        assertThat(useCaseInDomain).isEmpty()
     }
 
     @Test
     fun `infrastructure layer must not contain use case implementations`() {
         val infraClasses = importClassesFrom(INFRA_PACKAGE)
-        if (infraClasses.isEmpty()) return
+        assertThat(infraClasses).isNotEmpty
         val useCaseInInfra = infraClasses.filter { it.simpleName.contains("UseCaseImpl") }
-        if (useCaseInInfra.isEmpty()) return
-        val rule =
-            noClasses()
-                .that()
-                .haveNameMatching(".*UseCaseImpl.*")
-                .should()
-                .resideInAnyPackage(INFRA_PACKAGE)
-                .because("Infrastructure layer must not contain use case implementations")
-        rule.check(infraClasses)
+        assertThat(useCaseInInfra).isEmpty()
     }
 }
