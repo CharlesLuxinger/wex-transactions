@@ -6,6 +6,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mock
@@ -180,6 +182,85 @@ class ExchangeRateTreasuryAdapterTest {
 
         val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
 
+        assertThat(result).isNull()
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["N/A", "-", "", "invalid-rate"])
+    @DisplayName("Malformed exchange rate values are safely rejected")
+    fun `malformed exchange rate values are rejected`(malformedRate: String) {
+        val record =
+            TreasuryRateRecord(
+                recordDate = "2026-05-20",
+                country = "Brazil",
+                currency = "Real",
+                countryCurrencyDesc = "Brazil-Real",
+                exchangeRate = malformedRate,
+            )
+
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
+
+        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+
+        assertThat(result).isNull()
+    }
+
+    @Test
+    @DisplayName("Multiple records choose newest exchange rate")
+    fun `multiple records choose newest record`() {
+        val newestRecord =
+            TreasuryRateRecord(
+                recordDate = "2026-05-22",
+                country = "Brazil",
+                currency = "Real",
+                countryCurrencyDesc = "Brazil-Real",
+                exchangeRate = "5.90",
+            )
+        val olderRecord =
+            TreasuryRateRecord(
+                recordDate = "2026-05-20",
+                country = "Brazil",
+                currency = "Real",
+                countryCurrencyDesc = "Brazil-Real",
+                exchangeRate = "5.10",
+            )
+
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenReturn(TreasuryExchangeRateResponse(data = listOf(newestRecord, olderRecord)))
+
+        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+
+        assertThat(result).isNotNull
+        assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("5.90"))
+        assertThat(result.retrievedAt)
+            .isEqualTo(
+                LocalDate
+                    .parse("2026-05-22")
+                    .atStartOfDay(java.time.ZoneOffset.UTC)
+                    .toInstant(),
+            )
+    }
+
+    @Test
+    @DisplayName("Record older than 6-month window by one day is ignored")
+    fun `record older than six month window by one day is ignored`() {
+        var capturedFilter: String? = null
+
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenAnswer { invocation ->
+            capturedFilter = invocation.getArgument(1)
+            TreasuryExchangeRateResponse(data = emptyList())
+        }
+
+        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+
+        val outOfWindowDate = rateDate.minusMonths(6).minusDays(1)
+        assertThat(capturedFilter).contains("record_date:gte:$minBoundary")
+        assertThat(capturedFilter).doesNotContain(outOfWindowDate.toString())
         assertThat(result).isNull()
     }
 

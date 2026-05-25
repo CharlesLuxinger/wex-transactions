@@ -256,6 +256,7 @@ Each section includes:
 
 **What**
 - **Idempotency is NOT implemented.** Duplicate POST submissions create duplicate purchase records.
+- The same purchase payload sent twice must yield two successful `201 Created` responses with distinct `id` values.
 
 **Why**
 - No business requirement for idempotency key or deduplication.
@@ -265,6 +266,7 @@ Each section includes:
 **Evidence**
 - `PurchaseControllerV1` — no idempotency check, no deduplication logic.
 - `StorePurchaseUseCaseImpl` — always creates a new purchase.
+- `PurchaseControllerV1Test` integration coverage verifies duplicate POST body creates two distinct purchase records.
 
 **Rationale**
 - Adding idempotency without business requirement introduces unnecessary complexity.

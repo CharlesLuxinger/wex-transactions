@@ -2,26 +2,28 @@ package com.charlesluxinger.wex_transactions.infra.client.retrieveConverted
 
 import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTest
 import com.charlesluxinger.wex_transactions.config.RestAssuredRequestSupport
-import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
-import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
-import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.containing
+import com.github.tomakehurst.wiremock.client.WireMock.equalTo as wireMockEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import io.restassured.http.ContentType
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.equalTo
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.reset
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import java.math.BigDecimal
 import java.time.Duration
-import java.time.Instant
 
 class RetrieveConvertedControllerV1IntegrationTest :
     AbstractRestApiIntegrationTest(),
@@ -32,15 +34,12 @@ class RetrieveConvertedControllerV1IntegrationTest :
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
-    @MockitoBean
-    private lateinit var exchangeRateClientPort: ExchangeRateClientPort
-
     @BeforeEach
-    fun cleanRedisAndMocks() {
+    fun cleanRedisAndWireMock() {
         val cacheKeys = redisTemplate.keys("exchangeRate:*")
         redisTemplate.delete(cacheKeys)
         redisTemplate.opsForStream<String, String>().trim("exchange-rate-fetched-events", 0)
-        reset(exchangeRateClientPort)
+        server.resetAll()
     }
 
     private fun awaitCache(
@@ -60,14 +59,10 @@ class RetrieveConvertedControllerV1IntegrationTest :
     @Test
     @DisplayName("Retrieve converted caches treasury rate in Redis")
     fun `retrieve converted caches treasury rate in redis`() {
+        stubDefaultTreasuryRate("1.00")
+        stubTreasuryRateForDate("2026-01-16", "5.10")
+
         val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
-        `when`(
-            exchangeRateClientPort.fetchNearestPriorRate(
-                TargetCurrency("USD"),
-                TargetCurrency("BRL"),
-                java.time.LocalDate.parse("2026-01-16"),
-            ),
-        ).thenReturn(sampleRate("5.10"))
 
         givenJson()
             .accept(ContentType.JSON)
@@ -86,14 +81,10 @@ class RetrieveConvertedControllerV1IntegrationTest :
     @Test
     @DisplayName("Retrieve converted uses cache on second call")
     fun `retrieve converted uses cache on second call`() {
+        stubDefaultTreasuryRate("1.00")
+        stubTreasuryRateForDate("2026-01-16", "5.10")
+
         val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
-        `when`(
-            exchangeRateClientPort.fetchNearestPriorRate(
-                TargetCurrency("USD"),
-                TargetCurrency("BRL"),
-                java.time.LocalDate.parse("2026-01-16"),
-            ),
-        ).thenReturn(sampleRate("5.10"))
 
         givenJson()
             .accept(ContentType.JSON)
@@ -112,26 +103,22 @@ class RetrieveConvertedControllerV1IntegrationTest :
 
         awaitCache("exchangeRate:USD:BRL")
 
-        verify(exchangeRateClientPort, times(1)).fetchNearestPriorRate(
-            TargetCurrency("USD"),
-            TargetCurrency("BRL"),
-            java.time.LocalDate.parse("2026-01-16"),
-        )
+        val treasuryCallsForDate =
+            server.findAll(
+                getRequestedFor(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                    .withQueryParam("filter", containing("record_date:lte:2026-01-16")),
+            )
+        assertThat(treasuryCallsForDate).hasSize(1)
     }
 
     @Test
     @DisplayName("Retrieve converted falls back to treasury when redis value is malformed")
     fun `retrieve converted falls back to treasury when redis value is malformed`() {
+        stubDefaultTreasuryRate("1.00")
+        stubTreasuryRateForDate("2026-01-16", "5.20")
+
         val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
         redisTemplate.opsForValue().set("exchangeRate:USD:BRL", "{invalid-json")
-
-        `when`(
-            exchangeRateClientPort.fetchNearestPriorRate(
-                TargetCurrency("USD"),
-                TargetCurrency("BRL"),
-                java.time.LocalDate.parse("2026-01-16"),
-            ),
-        ).thenReturn(sampleRate("5.20"))
 
         givenJson()
             .accept(ContentType.JSON)
@@ -141,11 +128,12 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .statusCode(200)
             .body("exchangeRateUsed", equalTo(5.20f))
 
-        verify(exchangeRateClientPort, times(1)).fetchNearestPriorRate(
-            TargetCurrency("USD"),
-            TargetCurrency("BRL"),
-            java.time.LocalDate.parse("2026-01-16"),
-        )
+        val treasuryCallsForDate =
+            server.findAll(
+                getRequestedFor(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                    .withQueryParam("filter", containing("record_date:lte:2026-01-16")),
+            )
+        assertThat(treasuryCallsForDate).hasSize(1)
 
         val cached = awaitCache("exchangeRate:USD:BRL")
         val cacheValue = objectMapper.readTree(cached)
@@ -166,16 +154,32 @@ class RetrieveConvertedControllerV1IntegrationTest :
     }
 
     @Test
+    @DisplayName("Retrieve converted returns 422 when no rate is available")
+    fun `retrieve converted returns 422 when no rate is available`() {
+        stubDefaultTreasuryRate("1.00")
+        stubTreasuryNoRateForDate("2026-01-16")
+
+        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .then()
+            .statusCode(422)
+            .body("status", equalTo(422))
+            .body("title", equalTo("Conversion Unavailable"))
+            .body("detail", equalTo("Exchange rate unavailable: USD → BRL"))
+            .body("type", equalTo("about:blank"))
+    }
+
+    @Test
     @DisplayName("Stored purchase conversion is rounded to 2 decimals")
     fun `stored purchase conversion is rounded to 2 decimals`() {
+        stubDefaultTreasuryRate("1.00")
+        stubTreasuryRateForDate("2026-01-16", "5.10")
+
         val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z", BigDecimal("10.005"))
-        `when`(
-            exchangeRateClientPort.fetchNearestPriorRate(
-                TargetCurrency("USD"),
-                TargetCurrency("BRL"),
-                java.time.LocalDate.parse("2026-01-16"),
-            ),
-        ).thenReturn(sampleRate("5.10"))
 
         givenJson()
             .accept(ContentType.JSON)
@@ -190,22 +194,8 @@ class RetrieveConvertedControllerV1IntegrationTest :
         targetCurrency: String,
         transactionDate: String,
         amount: BigDecimal = BigDecimal("100.00"),
-    ): Long {
-        `when`(
-            exchangeRateClientPort.fetchRate(
-                TargetCurrency("USD"),
-                TargetCurrency(targetCurrency),
-            ),
-        ).thenReturn(
-            ExchangeRate(
-                rate = BigDecimal.ONE,
-                sourceCurrency = TargetCurrency("USD"),
-                targetCurrency = TargetCurrency(targetCurrency),
-                retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
-            ),
-        )
-
-        return givenJson()
+    ): Long =
+        givenJson()
             .body(
                 mapOf(
                     "description" to "Lunch at Restaurant",
@@ -221,13 +211,100 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .extract()
             .path<Int>("id")
             .toLong()
+
+    private fun stubDefaultTreasuryRate(rate: String) {
+        server.stubFor(
+            get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                .atPriority(10)
+                .withQueryParam(
+                    "fields",
+                    wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
+                ).withQueryParam("sort", wireMockEqualTo("-record_date"))
+                .withQueryParam("filter", containing("record_date:lte:"))
+                .withQueryParam("page[size]", wireMockEqualTo("10000"))
+                .willReturn(rateResponse(rate, "2026-01-15")),
+        )
     }
 
-    private fun sampleRate(rate: String): ExchangeRate =
-        ExchangeRate(
-            rate = BigDecimal(rate),
-            sourceCurrency = TargetCurrency("USD"),
-            targetCurrency = TargetCurrency("BRL"),
-            retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
+    private fun stubTreasuryRateForDate(
+        rateDate: String,
+        rate: String,
+    ) {
+        server.stubFor(
+            get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                .atPriority(1)
+                .withQueryParam(
+                    "fields",
+                    wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
+                ).withQueryParam("sort", wireMockEqualTo("-record_date"))
+                .withQueryParam("filter", containing("record_date:lte:$rateDate"))
+                .withQueryParam("page[size]", wireMockEqualTo("10000"))
+                .willReturn(rateResponse(rate, rateDate)),
         )
+    }
+
+    private fun stubTreasuryNoRateForDate(rateDate: String) {
+        server.stubFor(
+            get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                .atPriority(1)
+                .withQueryParam(
+                    "fields",
+                    wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
+                ).withQueryParam("sort", wireMockEqualTo("-record_date"))
+                .withQueryParam("filter", containing("record_date:lte:$rateDate"))
+                .withQueryParam("page[size]", wireMockEqualTo("10000"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"data\":[]}"),
+                ),
+        )
+    }
+
+    private fun rateResponse(
+        rate: String,
+        recordDate: String,
+    ) = aResponse()
+        .withStatus(200)
+        .withHeader("Content-Type", "application/json")
+        .withBody(
+            """
+            {
+              "data": [
+                {
+                  "record_date": "$recordDate",
+                  "country": "Brazil",
+                  "currency": "Real",
+                  "country_currency_desc": "Brazil-Real",
+                  "exchange_rate": "$rate"
+                }
+              ]
+            }
+            """.trimIndent(),
+        )
+
+    companion object {
+        private val server = WireMockServer(0)
+
+        @JvmStatic
+        @BeforeAll
+        fun startWireMock() {
+            server.start()
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun stopWireMock() {
+            server.stop()
+        }
+
+        @JvmStatic
+        @DynamicPropertySource
+        fun registerProperties(registry: DynamicPropertyRegistry) {
+            registry.add("treasury.api.base-url") {
+                "${server.baseUrl()}/services/api/fiscal_service/v1/accounting/od"
+            }
+        }
+    }
 }

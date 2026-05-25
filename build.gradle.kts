@@ -63,6 +63,7 @@ dependencies {
     testImplementation("org.testcontainers:postgresql")
     testImplementation("io.rest-assured:rest-assured")
     testImplementation("com.squareup.okhttp3:mockwebserver")
+    testImplementation("com.github.tomakehurst:wiremock-jre8-standalone:2.35.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
