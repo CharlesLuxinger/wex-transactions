@@ -6,18 +6,11 @@ import org.junit.jupiter.api.Test
 /**
  * Guards the architecture test suite against vacuous green outcomes.
  *
- * In the current scaffold phase, domain/application/infra packages may not yet exist.
- * This test documents the explicit policy:
- * - Architecture rules use `allowEmptyShould(true)` for per-layer scoped rules
- *   to avoid false failures while the package tree is incomplete.
- * - Non-vacuous behavior is enforced by asserting the overall import scope
- *   (base package) is non-empty — ensuring the importer is wired correctly.
+ * Enforces non-vacuous assertion policy: all layer packages must be non-empty.
+ * This ensures the ClassFileImporter is correctly wired and the hexagonal architecture
+ * is properly established with domain, application, and infrastructure layers.
  *
- * Once domain/application/infra packages are created, tests in DependencyDirectionTest,
- * ControllerBoundaryTest, and UseCaseOwnershipTest will automatically exercise
- * real classes and no longer rely on empty-scope guards.
- *
- * Governance reference: AGENTS.md - "Repository is currently scaffold-only"
+ * Governance reference: AGENTS.md - "Dependency direction and architecture constraints"
  */
 class VacuousGuardTest : ArchitectureTest() {
     @Test
@@ -25,22 +18,27 @@ class VacuousGuardTest : ArchitectureTest() {
         val classes = importClasses()
         // Ensures that the ClassFileImporter is correctly wired to the compiled classes.
         // A vacuously passing importer (returning zero classes) would fail here first.
-        assertThat(classes.size).isGreaterThan(0)
+        assertThat(classes).isNotEmpty()
     }
 
     @Test
-    fun `empty scope policy is explicitly documented`() {
-        // This test documents the intentional allowEmptyShould(true) policy used in
-        // DependencyDirectionTest for layer-scoped rules during scaffold phase.
-        // Removing allowEmptyShould(true) without adding real layer packages would
-        // cause those tests to fail, making boundary violations visible.
-        val domainSize = importClassesFrom(DOMAIN_PACKAGE).size
-        val applicationSize = importClassesFrom(APPLICATION_PACKAGE).size
-        val infraSize = importClassesFrom(INFRA_PACKAGE).size
+    fun `domain package must be non-empty`() {
+        // Domain layer must exist and contain classes to enforce architecture.
+        val domainClasses = importClassesFrom(DOMAIN_PACKAGE)
+        assertThat(domainClasses).isNotEmpty()
+    }
 
-        // All sizes must be non-negative — sanity check on importer correctness
-        assertThat(domainSize).isGreaterThanOrEqualTo(0)
-        assertThat(applicationSize).isGreaterThanOrEqualTo(0)
-        assertThat(infraSize).isGreaterThanOrEqualTo(0)
+    @Test
+    fun `application package must be non-empty`() {
+        // Application layer must exist and contain classes to enforce architecture.
+        val applicationClasses = importClassesFrom(APPLICATION_PACKAGE)
+        assertThat(applicationClasses).isNotEmpty()
+    }
+
+    @Test
+    fun `infrastructure package must be non-empty`() {
+        // Infrastructure layer must exist and contain classes to enforce architecture.
+        val infraClasses = importClassesFrom(INFRA_PACKAGE)
+        assertThat(infraClasses).isNotEmpty()
     }
 }
