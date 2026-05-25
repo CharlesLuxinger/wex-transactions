@@ -1,8 +1,12 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.external.treasury
 
 import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
+import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
+import io.github.resilience4j.bulkhead.annotation.Bulkhead
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.LocalDate
 import java.util.Currency
@@ -19,6 +23,8 @@ class ExchangeRateTreasuryAdapter(
         fetchNearestPriorRate(from, to, LocalDate.now())
             ?: throw IllegalStateException("No exchange rate available for $from -> $to")
 
+    @CircuitBreaker(name = TREASURY_RATES_RESILIENCE, fallbackMethod = "fallback")
+    @Bulkhead(name = TREASURY_RATES_RESILIENCE, type = Bulkhead.Type.SEMAPHORE)
     override fun fetchNearestPriorRate(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
@@ -56,11 +62,29 @@ class ExchangeRateTreasuryAdapter(
         }
     }
 
-    companion object {
+    private fun fallback(
+        sourceCurrency: TargetCurrency,
+        targetCurrency: TargetCurrency,
+        rateDate: LocalDate,
+        throwable: Throwable,
+    ): ExchangeRate? {
+        logger.error(
+            "Treasury rate lookup failed for {} -> {} on {}",
+            sourceCurrency.code,
+            targetCurrency.code,
+            rateDate,
+            throwable,
+        )
+        throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
+    }
+
+    private companion object {
         private const val PAGE_SIZE = 10_000
         private const val DEFAULT_WINDOW_MONTHS = 6L
         private const val FIELDS = "record_date,country,currency,country_currency_desc,exchange_rate"
         private const val FILTER_FORMAT = "record_date:lte:%s,record_date:gte:%s"
         private const val SORT = "-record_date"
+        private const val TREASURY_RATES_RESILIENCE = "treasury-rates"
+        private val logger = LoggerFactory.getLogger(ExchangeRateTreasuryAdapter::class.java)
     }
 }

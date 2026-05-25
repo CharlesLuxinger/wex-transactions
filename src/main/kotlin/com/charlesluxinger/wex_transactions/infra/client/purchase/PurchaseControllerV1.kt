@@ -4,6 +4,7 @@ import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.StorePu
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseCommand
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseRequest
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseResponse
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
@@ -18,6 +19,7 @@ class PurchaseControllerV1(
     private val storePurchaseCommandPort: StorePurchaseCommandPort,
 ) {
     @PostMapping
+    @RateLimiter(name = API_PURCHASES_RATE_LIMITER)
     @ResponseStatus(HttpStatus.CREATED)
     fun storePurchase(
         @Valid @RequestBody request: StorePurchaseRequest,
@@ -44,5 +46,9 @@ class PurchaseControllerV1(
             convertedAmount = result.convertedAmount,
             createdAt = result.createdAt,
         )
+    }
+
+    private companion object {
+        private const val API_PURCHASES_RATE_LIMITER = "api-purchases"
     }
 }
