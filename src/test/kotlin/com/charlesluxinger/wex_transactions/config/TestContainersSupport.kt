@@ -10,7 +10,7 @@ open class TestContainersSupport {
     protected lateinit var jdbcTemplate: JdbcTemplate
 
     protected fun cleanupDatabase() {
-        val tables = listOf("exchange_rates", "purchases")
+        val tables = listOf("purchases")
 
         tables.forEach { table ->
             try {

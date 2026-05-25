@@ -28,7 +28,7 @@ Start services in detached mode:
 docker compose up -d
 ```
 
-Expected result: application and PostgreSQL services start.
+Expected result: application, PostgreSQL, and Redis services start.
 
 ## 4) Inspect Services
 
@@ -55,6 +55,14 @@ docker compose logs postgres
 ```
 
 Look for readiness markers indicating the database is accepting connections.
+
+4. Verify Redis readiness logs:
+
+```bash
+docker compose logs redis
+```
+
+Look for readiness markers indicating Redis is accepting connections.
 
 ## 5) Run Verification
 
@@ -166,6 +174,17 @@ Symptoms: Docker commands fail to connect to daemon.
 
 Action: start Docker Desktop, then rerun stack commands.
 
+### Redis connection failure
+
+Symptoms: app cannot connect to Redis, cache operations fail.
+
+Actions:
+1. Verify Redis container running: `docker compose ps | grep redis`
+2. Check Redis logs: `docker compose logs redis`
+3. Verify port: `docker compose port redis 6379` returns `0.0.0.0:6379`
+4. Test ping: `docker compose exec redis redis-cli ping` returns `PONG`
+5. Restart: `docker compose restart redis`
+
 ## 9) Reference
 
 Environment variables used by the application:
@@ -175,3 +194,5 @@ Environment variables used by the application:
 | `DB_URL` | `jdbc:postgresql://localhost:5432/wex_transactions` | PostgreSQL JDBC URL used by Spring datasource. |
 | `DB_USERNAME` | `postgres` | Database username for datasource authentication. |
 | `DB_PASSWORD` | `postgres` | Database password for datasource authentication. |
+| `REDIS_HOST` | `redis` | Redis service hostname (Docker network name). |
+| `REDIS_PORT` | `6379` | Redis service port. |

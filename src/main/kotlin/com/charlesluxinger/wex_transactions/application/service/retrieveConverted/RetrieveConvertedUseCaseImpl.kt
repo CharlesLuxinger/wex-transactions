@@ -6,8 +6,8 @@ import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedResponse
+import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCachePort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
-import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateRepositoryPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.springframework.stereotype.Service
 import java.math.RoundingMode
@@ -15,7 +15,7 @@ import java.math.RoundingMode
 @Service
 class RetrieveConvertedUseCaseImpl(
     private val purchaseRepositoryPort: PurchaseRepositoryPort,
-    private val exchangeRateRepositoryPort: ExchangeRateRepositoryPort,
+    private val exchangeRateCachePort: ExchangeRateCachePort,
     private val exchangeRateClientPort: ExchangeRateClientPort,
 ) : RetrieveConvertedQueryPort {
     override fun retrieveConverted(query: RetrieveConvertedQuery): RetrieveConvertedResponse {
@@ -26,24 +26,21 @@ class RetrieveConvertedUseCaseImpl(
         val sourceCurrency = purchase.transactionCurrency
         val targetCurrency = TargetCurrency(query.targetCurrency)
         val rateDate = purchase.transactionDate.value.toLocalDate()
-
-        val persistedRate =
-            exchangeRateRepositoryPort.findNearestPriorRate(
-                sourceCurrency = sourceCurrency,
-                targetCurrency = targetCurrency,
-                rateDate = rateDate,
-                maxWindowMonths = MAX_WINDOW_MONTHS,
-            )
+        val cachedRate = exchangeRateCachePort.getRate(sourceCurrency = sourceCurrency, targetCurrency = targetCurrency)
 
         val rate =
-            persistedRate
+            cachedRate
                 ?: exchangeRateClientPort
                     .fetchNearestPriorRate(
                         sourceCurrency = sourceCurrency,
                         targetCurrency = targetCurrency,
                         rateDate = rateDate,
                     )?.also { fetchedRate ->
-                        exchangeRateRepositoryPort.save(fetchedRate, rateDate)
+                        exchangeRateCachePort.saveRate(
+                            sourceCurrency = sourceCurrency,
+                            targetCurrency = targetCurrency,
+                            rate = fetchedRate,
+                        )
                     } ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
 
         val convertedAmount =
@@ -64,7 +61,6 @@ class RetrieveConvertedUseCaseImpl(
     }
 
     companion object {
-        private const val MAX_WINDOW_MONTHS = 6L
         private const val CONVERSION_SCALE = 2
     }
 }
