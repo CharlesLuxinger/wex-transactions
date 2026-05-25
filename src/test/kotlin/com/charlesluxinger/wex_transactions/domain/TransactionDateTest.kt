@@ -109,6 +109,19 @@ class TransactionDateTest {
     }
 
     @Test
+    fun `should accept ISO-8601 date with timezone and zone ID`() {
+        val date = TransactionDate("2026-08-10T15:30:45+02:00[Europe/Paris]")
+
+        assertEquals(LocalDateTime.of(2026, 8, 10, 15, 30, 45), date.value)
+    }
+
+    @Test
+    fun `should not equal different type`() {
+        assertNotEquals<Any>(TransactionDate("2026-01-10T15:30:45Z"), "not-a-date")
+        assertNotEquals<Any?>(TransactionDate("2026-01-10T15:30:45Z"), null)
+    }
+
+    @Test
     fun `should drop milliseconds in normalized form`() {
         val date = TransactionDate("2026-01-10T15:30:45.123+00:00")
 

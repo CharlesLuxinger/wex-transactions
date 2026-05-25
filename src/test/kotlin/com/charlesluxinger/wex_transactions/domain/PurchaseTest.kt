@@ -157,6 +157,18 @@ class PurchaseTest {
     }
 
     @Test
+    fun `should not equal different type`() {
+        assertNotEquals<Any>(samplePurchase(), "not-a-purchase")
+        assertNotEquals<Any?>(samplePurchase(), null)
+    }
+
+    @Test
+    fun `should equal itself`() {
+        val purchase = samplePurchase()
+        assertEquals(purchase, purchase)
+    }
+
+    @Test
     fun `should reject non positive id`() {
         val error =
             assertFailsWith<IllegalArgumentException> {
