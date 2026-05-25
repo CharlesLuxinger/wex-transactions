@@ -17,10 +17,8 @@ import java.time.Duration
 
 @Configuration
 class ExchangeRateEventsStreamConfig {
-
     @Bean
-    fun exchangeRateEventsStreamProperties(): ExchangeRateEventsStreamProperties =
-        ExchangeRateEventsStreamProperties()
+    fun exchangeRateEventsStreamProperties(): ExchangeRateEventsStreamProperties = ExchangeRateEventsStreamProperties()
 
     @Bean
     fun exchangeRateEventsStreamOffset(properties: ExchangeRateEventsStreamProperties): StreamOffset<String> =
@@ -36,9 +34,11 @@ class ExchangeRateEventsStreamConfig {
     ): StreamMessageListenerContainer<String, MapRecord<String, String, String>> {
         val streamOps = stringRedisTemplate.opsForStream<String, String>()
         createConsumerGroupIfMissing(streamOps, properties.key, properties.group)
-        val options = StreamMessageListenerContainerOptions.builder()
-            .pollTimeout(Duration.ofSeconds(2))
-            .build()
+        val options =
+            StreamMessageListenerContainerOptions
+                .builder()
+                .pollTimeout(Duration.ofSeconds(2))
+                .build()
         val container = StreamMessageListenerContainer.create(redisConnectionFactory, options)
         container.receive(eventListener.consumer, streamOffset, eventListener)
         container.start()

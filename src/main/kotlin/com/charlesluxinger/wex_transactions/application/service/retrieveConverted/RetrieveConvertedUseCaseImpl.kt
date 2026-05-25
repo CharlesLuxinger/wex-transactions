@@ -11,6 +11,7 @@ import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCac
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateEventPort
 import com.charlesluxinger.wex_transactions.domain.event.ExchangeRateFetchedEvent
+import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.springframework.stereotype.Service
 import java.math.RoundingMode
@@ -34,6 +35,7 @@ class RetrieveConvertedUseCaseImpl(
         val rate =
             exchangeRateCachePort.getRate(sourceCurrency, targetCurrency)
                 ?: fetchClient(sourceCurrency, targetCurrency, rateDate)
+                    ?.also { publishToCache(it, purchase) }
 
         rate ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
 
@@ -58,29 +60,28 @@ class RetrieveConvertedUseCaseImpl(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
-    ): ExchangeRate? {
-        val fetchedRate = exchangeRateClientPort.fetchNearestPriorRate(
+    ): ExchangeRate? =
+        exchangeRateClientPort.fetchNearestPriorRate(
             sourceCurrency = sourceCurrency,
             targetCurrency = targetCurrency,
             rateDate = rateDate,
         )
 
-        if (fetchedRate != null) {
-            val eventPort = exchangeRateEventPort
-            runCatching {
-                eventPort.publish(
-                    ExchangeRateFetchedEvent(
-                        sourceCurrency = sourceCurrency.code,
-                        targetCurrency = targetCurrency.code,
-                        rate = fetchedRate.rate,
-                        retrievedAt = fetchedRate.retrievedAt,
-                        rateDate = rateDate,
-                    ),
-                )
-            }
+    private fun publishToCache(
+        rate: ExchangeRate,
+        purchase: Purchase,
+    ) {
+        runCatching {
+            exchangeRateEventPort.publish(
+                ExchangeRateFetchedEvent(
+                    sourceCurrency = rate.sourceCurrency.code,
+                    targetCurrency = rate.targetCurrency.code,
+                    rate = rate.rate,
+                    retrievedAt = rate.retrievedAt,
+                    rateDate = purchase.transactionDate.value.toLocalDate(),
+                ),
+            )
         }
-
-        return fetchedRate
     }
 
     companion object {

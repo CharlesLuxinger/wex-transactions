@@ -22,9 +22,10 @@ class ExchangeRateFetchedEventListener(
     private val streamProperties: ExchangeRateEventsStreamProperties,
     objectMapper: ObjectMapper,
 ) : StreamListener<String, MapRecord<String, String, String>> {
-
-    private val eventReader = objectMapper.copy()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    private val eventReader =
+        objectMapper
+            .copy()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     private val consumerName = "${streamProperties.consumer}-${UUID.randomUUID()}"
     val consumer: Consumer = Consumer.from(streamProperties.group, consumerName)
     private val streamOps = stringRedisTemplate.opsForStream<String, String>()
@@ -34,20 +35,22 @@ class ExchangeRateFetchedEventListener(
     }
 
     private fun handleRecord(record: MapRecord<String, String, String>) {
-        val event = extractPayload(record)?.let { payload ->
-            runCatching { eventReader.readValue(payload, ExchangeRateFetchedEvent::class.java) }
-                .onFailure { ex ->
-                    logger.warn("Ignoring malformed exchange-rate-fetched stream payload", ex)
-                }.getOrNull()
-        } ?: return
+        val event =
+            extractPayload(record)?.let { payload ->
+                runCatching { eventReader.readValue(payload, ExchangeRateFetchedEvent::class.java) }
+                    .onFailure { ex ->
+                        logger.warn("Ignoring malformed exchange-rate-fetched stream payload", ex)
+                    }.getOrNull()
+            } ?: return
 
         runCatching {
-            val rate = ExchangeRate(
-                rate = event.rate,
-                sourceCurrency = TargetCurrency(event.sourceCurrency),
-                targetCurrency = TargetCurrency(event.targetCurrency),
-                retrievedAt = event.retrievedAt,
-            )
+            val rate =
+                ExchangeRate(
+                    rate = event.rate,
+                    sourceCurrency = TargetCurrency(event.sourceCurrency),
+                    targetCurrency = TargetCurrency(event.targetCurrency),
+                    retrievedAt = event.retrievedAt,
+                )
             exchangeRateCachePort.saveRate(
                 sourceCurrency = TargetCurrency(event.sourceCurrency),
                 targetCurrency = TargetCurrency(event.targetCurrency),
@@ -61,8 +64,9 @@ class ExchangeRateFetchedEventListener(
     }
 
     private fun extractPayload(record: MapRecord<String, String, String>): String? {
-        val payload = record.value[streamProperties.payloadField]
-            ?: record.value.values.singleOrNull()
+        val payload =
+            record.value[streamProperties.payloadField]
+                ?: record.value.values.singleOrNull()
 
         if (payload == null) {
             logger.warn("Ignoring exchange-rate-fetched stream payload with missing body")

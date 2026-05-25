@@ -17,7 +17,7 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.data.redis.core.StringRedisTemplate
 import java.math.BigDecimal
 import java.time.Duration
@@ -32,13 +32,13 @@ class RetrieveConvertedControllerV1IntegrationTest :
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
-    @MockBean
+    @MockitoBean
     private lateinit var exchangeRateClientPort: ExchangeRateClientPort
 
     @BeforeEach
     fun cleanRedisAndMocks() {
         val cacheKeys = redisTemplate.keys("exchangeRate:*")
-        if (cacheKeys != null) redisTemplate.delete(cacheKeys)
+        redisTemplate.delete(cacheKeys)
         redisTemplate.opsForStream<String, String>().trim("exchange-rate-fetched-events", 0)
         reset(exchangeRateClientPort)
     }

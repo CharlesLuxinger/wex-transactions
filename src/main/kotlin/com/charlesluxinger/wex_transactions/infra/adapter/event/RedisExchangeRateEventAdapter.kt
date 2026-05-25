@@ -14,7 +14,6 @@ class RedisExchangeRateEventAdapter(
     private val objectMapper: ObjectMapper,
     private val streamProperties: ExchangeRateEventsStreamProperties,
 ) : ExchangeRateEventPort {
-
     override fun publish(event: ExchangeRateFetchedEvent) {
         runCatching {
             val payload = objectMapper.writeValueAsString(event)
