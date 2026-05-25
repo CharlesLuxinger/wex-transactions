@@ -5,8 +5,10 @@ import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateEve
 import com.charlesluxinger.wex_transactions.infra.adapter.event.config.ExchangeRateEventsStreamProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
+import java.util.UUID
 
 @Component
 class RedisExchangeRateEventAdapter(
@@ -17,8 +19,13 @@ class RedisExchangeRateEventAdapter(
     override fun publish(event: ExchangeRateFetchedEvent) {
         runCatching {
             val payload = objectMapper.writeValueAsString(event)
+            val traceId = MDC.get("traceId") ?: UUID.randomUUID().toString().replace("-", "")
             val streamKey = streamProperties.key
-            val payloadRecord = mapOf(streamProperties.payloadField to payload)
+            val payloadRecord =
+                mapOf(
+                    streamProperties.payloadField to payload,
+                    streamProperties.traceIdField to traceId,
+                )
             stringRedisTemplate.opsForStream<String, String>().add(streamKey, payloadRecord)
         }.onFailure { exception ->
             logger.warn(

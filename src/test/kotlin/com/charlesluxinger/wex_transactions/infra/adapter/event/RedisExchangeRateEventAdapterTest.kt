@@ -63,8 +63,11 @@ class RedisExchangeRateEventAdapterTest {
     fun `publish failure does not propagate`() {
         val event = sampleEvent()
         `when`(stringRedisTemplate.opsForStream<String, String>()).thenReturn(streamOperations)
-        val expectedPayload = mapOf(streamProperties.payloadField to objectMapper.writeValueAsString(event))
-        doThrow(RuntimeException("boom")).`when`(streamOperations).add(streamProperties.key, expectedPayload)
+        doThrow(
+            RuntimeException("boom"),
+        ).`when`(
+            streamOperations,
+        ).add(org.mockito.ArgumentMatchers.eq(streamProperties.key), org.mockito.ArgumentMatchers.anyMap())
 
         val logger = LoggerFactory.getLogger(RedisExchangeRateEventAdapter::class.java) as Logger
         val appender = ListAppender<ILoggingEvent>()

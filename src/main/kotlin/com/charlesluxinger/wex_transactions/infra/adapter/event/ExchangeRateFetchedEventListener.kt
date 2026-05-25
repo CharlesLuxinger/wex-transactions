@@ -8,6 +8,7 @@ import com.charlesluxinger.wex_transactions.infra.adapter.event.config.ExchangeR
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.data.redis.connection.stream.Consumer
 import org.springframework.data.redis.connection.stream.MapRecord
 import org.springframework.data.redis.core.StringRedisTemplate
@@ -35,31 +36,37 @@ class ExchangeRateFetchedEventListener(
     }
 
     private fun handleRecord(record: MapRecord<String, String, String>) {
-        val event =
-            extractPayload(record)?.let { payload ->
-                runCatching { eventReader.readValue(payload, ExchangeRateFetchedEvent::class.java) }
-                    .onFailure { ex ->
-                        logger.warn("Ignoring malformed exchange-rate-fetched stream payload", ex)
-                    }.getOrNull()
-            } ?: return
+        MDC.put("traceId", streamProperties.resolveTraceId(record))
 
-        runCatching {
-            val rate =
-                ExchangeRate(
-                    rate = event.rate,
+        try {
+            val event =
+                extractPayload(record)?.let { payload ->
+                    runCatching { eventReader.readValue(payload, ExchangeRateFetchedEvent::class.java) }
+                        .onFailure { ex ->
+                            logger.warn("Ignoring malformed exchange-rate-fetched stream payload", ex)
+                        }.getOrNull()
+                } ?: return
+
+            runCatching {
+                val rate =
+                    ExchangeRate(
+                        rate = event.rate,
+                        sourceCurrency = TargetCurrency(event.sourceCurrency),
+                        targetCurrency = TargetCurrency(event.targetCurrency),
+                        retrievedAt = event.retrievedAt,
+                    )
+                exchangeRateCachePort.saveRate(
                     sourceCurrency = TargetCurrency(event.sourceCurrency),
                     targetCurrency = TargetCurrency(event.targetCurrency),
-                    retrievedAt = event.retrievedAt,
+                    rate = rate,
                 )
-            exchangeRateCachePort.saveRate(
-                sourceCurrency = TargetCurrency(event.sourceCurrency),
-                targetCurrency = TargetCurrency(event.targetCurrency),
-                rate = rate,
-            )
-        }.onSuccess {
-            acknowledge(record)
-        }.onFailure { ex ->
-            logger.error("Failed to save exchange rate from stream event", ex)
+            }.onSuccess {
+                acknowledge(record)
+            }.onFailure { ex ->
+                logger.error("Failed to save exchange rate from stream event", ex)
+            }
+        } finally {
+            MDC.clear()
         }
     }
 
