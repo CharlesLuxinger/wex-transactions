@@ -54,7 +54,7 @@ dependencies {
 
     runtimeOnly("org.postgresql:postgresql")
 
-    //TEST
+    // TEST
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

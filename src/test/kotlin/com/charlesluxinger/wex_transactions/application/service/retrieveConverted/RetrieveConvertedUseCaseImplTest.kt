@@ -11,19 +11,28 @@ import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverte
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCachePort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateEventPort
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.LoggerContext
+import ch.qos.logback.core.read.ListAppender
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.math.BigDecimal
 import java.time.Instant
 
 class RetrieveConvertedUseCaseImplTest {
+    private lateinit var listAppender: ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>
+
     private val purchaseRepositoryPort = mock(PurchaseRepositoryPort::class.java)
     private val exchangeRateCachePort = mock(ExchangeRateCachePort::class.java)
     private val exchangeRateClientPort = mock(ExchangeRateClientPort::class.java)
@@ -36,6 +45,25 @@ class RetrieveConvertedUseCaseImplTest {
             exchangeRateClientPort = exchangeRateClientPort,
             exchangeRateEventPort = exchangeRateEventPort,
         )
+
+    @BeforeEach
+    fun setUp() {
+        val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
+        val logger = loggerContext.getLogger(RetrieveConvertedUseCaseImpl::class.java)
+        logger.level = Level.WARN
+        listAppender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>()
+        listAppender.context = loggerContext
+        listAppender.start()
+        logger.addAppender(listAppender)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
+        val logger = loggerContext.getLogger(RetrieveConvertedUseCaseImpl::class.java)
+        logger.detachAppender(listAppender)
+        MDC.clear()
+    }
 
     @Test
     fun `cache hit returns cached rate and skips treasury`() {
@@ -93,7 +121,7 @@ class RetrieveConvertedUseCaseImplTest {
     }
 
     @Test
-    fun `publish failure does not block response`() {
+    fun `publish failure does not block response and logs trace id plus error`() {
         val purchase = samplePurchase(4L)
         val query = RetrieveConvertedQuery(purchaseId = 4L, targetCurrency = "BRL")
         val fetchedRate = sampleRate("5.25")
@@ -116,6 +144,7 @@ class RetrieveConvertedUseCaseImplTest {
                 rateDate = purchase.transactionDate.value.toLocalDate(),
             )
         doThrow(RuntimeException("publish failed")).`when`(exchangeRateEventPort).publish(fetchedEvent)
+        MDC.put("traceId", "trace-abc-123")
 
         val response = useCase.retrieveConverted(query)
 
@@ -127,6 +156,15 @@ class RetrieveConvertedUseCaseImplTest {
             TargetCurrency("BRL"),
             purchase.transactionDate.value.toLocalDate(),
         )
+
+        val warningLog =
+            listAppender.list.firstOrNull {
+                it.level == Level.WARN &&
+                    it.formattedMessage.contains("[USECASE][CACHE_PUBLISH][FAILED]")
+            }
+        assertEquals("trace-abc-123", warningLog?.mdcPropertyMap?.get("traceId"))
+        kotlin.test.assertNotNull(warningLog)
+        kotlin.test.assertTrue(warningLog.formattedMessage.contains("message=publish failed"))
     }
 
     @Test

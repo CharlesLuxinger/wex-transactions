@@ -1,7 +1,6 @@
 package com.charlesluxinger.wex_transactions.architecture
 
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
-import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

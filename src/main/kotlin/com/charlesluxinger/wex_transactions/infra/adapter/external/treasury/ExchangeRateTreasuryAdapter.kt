@@ -42,7 +42,16 @@ class ExchangeRateTreasuryAdapter(
             ?.let { data ->
                 val matched = matchRate(targetCurrency, data) ?: return@let null
                 if (!matched.hasValidExchangeRate || !matched.hasValidRecordDate) return@let null
-                ExchangeRate(matched.rate, sourceCurrency, targetCurrency, matched.retrievedAt)
+
+                val parsedRate = matched.parsedRate ?: return@let null
+                if (matched.parsedRecordDateOrNull == null) return@let null
+
+                ExchangeRate(
+                    parsedRate,
+                    sourceCurrency,
+                    targetCurrency,
+                    matched.retrievedAt,
+                )
             }
     }
 

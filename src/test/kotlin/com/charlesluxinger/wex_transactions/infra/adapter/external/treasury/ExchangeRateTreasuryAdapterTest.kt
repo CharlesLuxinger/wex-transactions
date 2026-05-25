@@ -161,4 +161,67 @@ class ExchangeRateTreasuryAdapterTest {
         assertThat(result).isNotNull
         assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("4.80"))
     }
+
+    @Test
+    @DisplayName("Null-like exchange rate values are safely rejected")
+    fun `null like exchange rate values are rejected`() {
+        val record =
+            TreasuryRateRecord(
+                recordDate = "2026-05-20",
+                country = "Brazil",
+                currency = "Real",
+                countryCurrencyDesc = "Brazil-Real",
+                exchangeRate = " N/A ",
+            )
+
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
+
+        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+
+        assertThat(result).isNull()
+    }
+
+    @Test
+    @DisplayName("Invalid numeric exchange rate is safely rejected")
+    fun `invalid numeric exchange rate is rejected`() {
+        val record =
+            TreasuryRateRecord(
+                recordDate = "2026-05-20",
+                country = "Brazil",
+                currency = "Real",
+                countryCurrencyDesc = "Brazil-Real",
+                exchangeRate = "5,25",
+            )
+
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
+
+        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+
+        assertThat(result).isNull()
+    }
+
+    @Test
+    @DisplayName("Invalid record date is safely rejected")
+    fun `invalid record date is rejected`() {
+        val record =
+            TreasuryRateRecord(
+                recordDate = "2026/05/20",
+                country = "Brazil",
+                currency = "Real",
+                countryCurrencyDesc = "Brazil-Real",
+                exchangeRate = "5.10",
+            )
+
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
+
+        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+
+        assertThat(result).isNull()
+    }
 }

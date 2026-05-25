@@ -27,6 +27,27 @@ class TreasuryRateRecordTest {
     }
 
     @Test
+    @DisplayName("Record with trimmed and uppercase null-like exchangeRate has hasValidExchangeRate = false")
+    fun `trimmed uppercase null like exchangeRate marks hasValidExchangeRate false`() {
+        val nullLikeValues = listOf(" null ", " NULL ", "-", " N/A ", "na", " NA ")
+
+        nullLikeValues.forEach { value ->
+            val record = TreasuryRateRecord(exchangeRate = value)
+            assertThat(record.hasValidExchangeRate).isFalse()
+        }
+    }
+
+    @Test
+    @DisplayName("Record parsedRate uses safe conversion and returns null for invalid numeric value")
+    fun `parsedRate returns null for invalid numeric value`() {
+        val invalidRate = TreasuryRateRecord(exchangeRate = "x5.25")
+        val validRate = TreasuryRateRecord(exchangeRate = " 5.25 ")
+
+        assertThat(invalidRate.parsedRate).isNull()
+        assertThat(validRate.parsedRate).isEqualByComparingTo("5.25")
+    }
+
+    @Test
     @DisplayName("Record with null-string recordDate has hasValidRecordDate = false")
     fun `null recordDate marks hasValidRecordDate false`() {
         val record = TreasuryRateRecord(recordDate = "null")
@@ -48,6 +69,16 @@ class TreasuryRateRecordTest {
     }
 
     @Test
+    @DisplayName("Record parsedRecordDateOrNull returns null for invalid date")
+    fun `parsedRecordDateOrNull returns null for invalid date`() {
+        val invalidDate = TreasuryRateRecord(recordDate = "2026/05/20")
+        val validDate = TreasuryRateRecord(recordDate = " 2026-05-20 ")
+
+        assertThat(invalidDate.parsedRecordDateOrNull).isNull()
+        assertThat(validDate.parsedRecordDateOrNull).isEqualTo(java.time.LocalDate.parse("2026-05-20"))
+    }
+
+    @Test
     @DisplayName("Record with null-string countryCurrencyDesc has hasValidDescription = false")
     fun `null countryCurrencyDesc marks hasValidDescription false`() {
         val record = TreasuryRateRecord(countryCurrencyDesc = "null")
@@ -66,5 +97,16 @@ class TreasuryRateRecordTest {
     fun `valid countryCurrencyDesc marks hasValidDescription true`() {
         val record = TreasuryRateRecord(countryCurrencyDesc = "Brazil-Real")
         assertThat(record.hasValidDescription).isTrue()
+    }
+
+    @Test
+    @DisplayName("Record with null-like countryCurrencyDesc values has hasValidDescription = false")
+    fun `null like countryCurrencyDesc marks hasValidDescription false`() {
+        val nullLikeValues = listOf(" null ", "-", " N/A ", "NA")
+
+        nullLikeValues.forEach { value ->
+            val record = TreasuryRateRecord(countryCurrencyDesc = value)
+            assertThat(record.hasValidDescription).isFalse()
+        }
     }
 }

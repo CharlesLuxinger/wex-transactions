@@ -5,6 +5,7 @@ import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -68,6 +69,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .statusCode(400)
             .body("title", equalTo("Bad Request"))
             .body("detail", equalTo("Description must not be blank"))
+            .body("errors.message", hasItem("Description must not be blank"))
     }
 
     @Test
@@ -90,6 +92,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .statusCode(400)
             .body("title", equalTo("Bad Request"))
             .body("detail", equalTo("Description must have at most 50 characters"))
+            .body("errors.message", hasItem("Description must have at most 50 characters"))
     }
 
     @Test
@@ -112,6 +115,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .statusCode(400)
             .body("title", equalTo("Bad Request"))
             .body("detail", equalTo("Transaction amount must be positive"))
+            .body("errors.message", hasItem("Transaction amount must be positive"))
     }
 
     @Test
@@ -133,7 +137,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .then()
             .statusCode(400)
             .body("title", equalTo("Bad Request"))
-            .body("detail", equalTo("Invalid ISO-8601 transaction date: invalid-date"))
+            .body("detail", equalTo("Invalid ISO-8601 transaction date format"))
     }
 
     @Test
@@ -156,6 +160,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .statusCode(400)
             .body("title", equalTo("Invalid Currency"))
             .body("detail", equalTo("Invalid currency code"))
+            .body("errors.message", hasItem("Invalid currency code"))
     }
 
     @Test
@@ -178,6 +183,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .statusCode(400)
             .body("title", equalTo("Bad Request"))
             .body("detail", equalTo("Transaction currency must be USD"))
+            .body("errors.message", hasItem("Transaction currency must be USD"))
     }
 }
 

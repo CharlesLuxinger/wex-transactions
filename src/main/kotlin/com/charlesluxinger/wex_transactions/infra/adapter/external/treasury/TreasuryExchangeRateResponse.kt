@@ -34,13 +34,24 @@ data class TreasuryRateRecord(
     val hasValidDescription: Boolean
 
     init {
-        fun isAvailable(value: String) = value != "null" && value.isNotBlank()
+        fun isAvailable(value: String): Boolean {
+            val normalized = value.trim().lowercase()
+            return normalized.isNotEmpty() && normalized !in UNAVAILABLE_VALUES
+        }
         hasValidExchangeRate = isAvailable(exchangeRate)
         hasValidRecordDate = isAvailable(recordDate)
         hasValidDescription = isAvailable(countryCurrencyDesc)
     }
 
-    val rate: BigDecimal get() = exchangeRate.toBigDecimal()
-    val parsedRecordDate: LocalDate get() = LocalDate.parse(recordDate, ISO_LOCAL_DATE)
+    val parsedRate: BigDecimal? get() = exchangeRate.trim().toBigDecimalOrNull()
+    val rate: BigDecimal get() = parsedRate ?: error("Invalid exchange rate: $exchangeRate")
+    val parsedRecordDateOrNull: LocalDate?
+        get() = runCatching { LocalDate.parse(recordDate.trim(), ISO_LOCAL_DATE) }.getOrNull()
+    val parsedRecordDate: LocalDate
+        get() = parsedRecordDateOrNull ?: error("Invalid record date: $recordDate")
     val retrievedAt: Instant get() = parsedRecordDate.atStartOfDay(UTC).toInstant()
+
+    private companion object {
+        private val UNAVAILABLE_VALUES = setOf("null", "-", "n/a", "na")
+    }
 }
