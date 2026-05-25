@@ -10,15 +10,20 @@ import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverte
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCachePort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
+import kotlinx.coroutines.Dispatchers
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalDate
 
 class RetrieveConvertedUseCaseImplTest {
     private val purchaseRepositoryPort = mock(PurchaseRepositoryPort::class.java)
@@ -30,6 +35,7 @@ class RetrieveConvertedUseCaseImplTest {
             purchaseRepositoryPort = purchaseRepositoryPort,
             exchangeRateCachePort = exchangeRateCachePort,
             exchangeRateClientPort = exchangeRateClientPort,
+            ioDispatcher = Dispatchers.Unconfined,
         )
 
     @Test
@@ -40,19 +46,18 @@ class RetrieveConvertedUseCaseImplTest {
 
         `when`(purchaseRepositoryPort.findById(1L)).thenReturn(purchase)
         `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(cachedRate)
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(sampleRate("5.50"))
 
         val response = useCase.retrieveConverted(query)
 
         assertEquals(BigDecimal("5.10"), response.exchangeRateUsed)
         assertEquals(BigDecimal("510.00"), response.convertedAmount)
-        verify(
-            exchangeRateClientPort,
-            never(),
-        ).fetchNearestPriorRate(
-            TargetCurrency("USD"),
-            TargetCurrency("BRL"),
-            purchase.transactionDate.value.toLocalDate(),
-        )
     }
 
     @Test
@@ -76,6 +81,151 @@ class RetrieveConvertedUseCaseImplTest {
         assertEquals(BigDecimal("5.25"), response.exchangeRateUsed)
         assertEquals(BigDecimal("525.00"), response.convertedAmount)
         verify(exchangeRateCachePort).saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), fetchedRate)
+    }
+
+    @Test
+    fun cacheStaleThenClientValidWins() {
+        val purchase = samplePurchase(20L)
+        val query = RetrieveConvertedQuery(purchaseId = 20L, targetCurrency = "BRL")
+        val staleCacheRate = sampleRate("5.00", "2025-01-01T12:00:00Z")
+        val clientRate = sampleRate("5.55", "2026-01-15T12:00:00Z")
+
+        `when`(purchaseRepositoryPort.findById(20L)).thenReturn(purchase)
+        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(staleCacheRate)
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(clientRate)
+
+        val response = useCase.retrieveConverted(query)
+
+        assertEquals(BigDecimal("5.55"), response.exchangeRateUsed)
+        verify(exchangeRateCachePort).saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), clientRate)
+    }
+
+    @Test
+    fun bothBranchesFailThrowsRateUnavailable() {
+        val purchase = samplePurchase(21L)
+        val staleCacheRate = sampleRate("5.00", "2025-01-01T12:00:00Z")
+
+        `when`(purchaseRepositoryPort.findById(21L)).thenReturn(purchase)
+        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(staleCacheRate)
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(null)
+
+        assertThrows(RateUnavailableException::class.java) {
+            useCase.retrieveConverted(RetrieveConvertedQuery(21L, "BRL"))
+        }
+    }
+
+    @Test
+    fun cacheWinnerDoesNotPublish() {
+        val purchase = samplePurchase(22L)
+        val query = RetrieveConvertedQuery(purchaseId = 22L, targetCurrency = "BRL")
+        val cacheRate = sampleRate("5.22")
+
+        `when`(purchaseRepositoryPort.findById(22L)).thenReturn(purchase)
+        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(cacheRate)
+
+        val response = useCase.retrieveConverted(query)
+
+        assertEquals(BigDecimal("5.22"), response.exchangeRateUsed)
+        verify(exchangeRateCachePort, never()).saveRate(
+            TargetCurrency("USD"),
+            TargetCurrency("BRL"),
+            cacheRate,
+        )
+    }
+
+    @Test
+    fun purchaseNotFoundSkipsRateCalls() {
+        `when`(purchaseRepositoryPort.findById(9999L)).thenReturn(null)
+
+        assertThrows(PurchaseNotFoundException::class.java) {
+            useCase.retrieveConverted(RetrieveConvertedQuery(9999L, "BRL"))
+        }
+
+        verifyNoInteractions(exchangeRateCachePort)
+        verifyNoInteractions(exchangeRateClientPort)
+    }
+
+    @Test
+    fun cacheOlderThan180DaysIsStale() {
+        val purchase = samplePurchase(23L)
+        val query = RetrieveConvertedQuery(purchaseId = 23L, targetCurrency = "BRL")
+        val staleCacheRate = sampleRate("5.00", "2025-01-01T12:00:00Z")
+        val clientRate = sampleRate("5.33", "2026-01-15T12:00:00Z")
+
+        `when`(purchaseRepositoryPort.findById(23L)).thenReturn(purchase)
+        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(staleCacheRate)
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(clientRate)
+
+        val response = useCase.retrieveConverted(query)
+
+        assertEquals(BigDecimal("5.33"), response.exchangeRateUsed)
+    }
+
+    @Test
+    fun cacheTimeoutClientSucceeds() {
+        val purchase = samplePurchase(24L)
+        val query = RetrieveConvertedQuery(purchaseId = 24L, targetCurrency = "BRL")
+        val clientRate = sampleRate("5.60", "2026-01-15T12:00:00Z")
+
+        `when`(purchaseRepositoryPort.findById(24L)).thenReturn(purchase)
+        doAnswer { throw IllegalStateException("cache timeout") }
+            .`when`(exchangeRateCachePort)
+            .getRate(TargetCurrency("USD"), TargetCurrency("BRL"))
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(clientRate)
+
+        val response = useCase.retrieveConverted(query)
+
+        assertEquals(BigDecimal("5.60"), response.exchangeRateUsed)
+    }
+
+    @Test
+    fun cancelLoserAfterWinnerSuccess() {
+        val purchase = samplePurchase(25L)
+        val query = RetrieveConvertedQuery(purchaseId = 25L, targetCurrency = "BRL")
+        val cacheRate = sampleRate("5.44")
+
+        `when`(purchaseRepositoryPort.findById(25L)).thenReturn(purchase)
+        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(cacheRate)
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(sampleRate("6.00"))
+
+        val response = useCase.retrieveConverted(query)
+
+        assertEquals(BigDecimal("5.44"), response.exchangeRateUsed)
+        verify(exchangeRateClientPort, times(1)).fetchNearestPriorRate(
+            TargetCurrency("USD"),
+            TargetCurrency("BRL"),
+            LocalDate.parse("2026-01-16"),
+        )
     }
 
     @Test
@@ -119,11 +269,14 @@ class RetrieveConvertedUseCaseImplTest {
             createdAt = Instant.parse("2026-01-16T10:00:00Z"),
         )
 
-    private fun sampleRate(rate: String): ExchangeRate =
+    private fun sampleRate(
+        rate: String,
+        retrievedAt: String = "2026-01-15T12:00:00Z",
+    ): ExchangeRate =
         ExchangeRate(
             rate = BigDecimal(rate),
             sourceCurrency = TargetCurrency("USD"),
             targetCurrency = TargetCurrency("BRL"),
-            retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
+            retrievedAt = Instant.parse(retrievedAt),
         )
 }

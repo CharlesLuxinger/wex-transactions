@@ -1,0 +1,7 @@
+Use-case focused tests: PASS (11/11, 3 runs)
+Port contract tests: PASS
+Architecture tests: PASS (5/5)
+ktlint format: PASS
+ktlint check: PASS
+detekt: PASS
+Full test suite: PASS
