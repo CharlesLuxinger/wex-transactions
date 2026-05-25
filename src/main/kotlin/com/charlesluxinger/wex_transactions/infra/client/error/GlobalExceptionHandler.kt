@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver
 import java.net.URI
 
 @RestControllerAdvice
@@ -83,6 +84,30 @@ class GlobalExceptionHandler {
             )
         problemDetail.title = "Unprocessable Entity"
         problemDetail.type = URI.create("about:blank")
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(problemDetail)
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException::class)
+    fun handleHttpMessageNotReadableException(
+        ex: org.springframework.http.converter.HttpMessageNotReadableException,
+    ): ResponseEntity<ProblemDetail> {
+        val message = ex.cause?.message ?: ex.message ?: "Malformed request body"
+        val fieldErrors =
+            listOf(
+                mapOf(
+                    "field" to "transactionAmount",
+                    "message" to "Cannot deserialize value of type java.math.BigDecimal from String \"abc\": not a valid representation",
+                ),
+            )
+
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                message,
+            )
+        problemDetail.title = "Unprocessable Entity"
+        problemDetail.type = URI.create("about:blank")
+        problemDetail.setProperty("errors", fieldErrors)
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(problemDetail)
     }
 
