@@ -107,6 +107,12 @@ class TargetCurrencyTest {
     }
 
     @Test
+    fun `should not equal different type`() {
+        assertNotEquals<Any>(TargetCurrency("USD"), "not-a-currency")
+        assertNotEquals<Any?>(TargetCurrency("USD"), null)
+    }
+
+    @Test
     fun `toString should return code`() {
         assertEquals("USD", TargetCurrency("USD").toString())
     }
