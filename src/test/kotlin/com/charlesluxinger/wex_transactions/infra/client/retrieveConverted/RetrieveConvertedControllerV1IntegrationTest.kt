@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.data.redis.core.StringRedisTemplate
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.Instant
 
 class RetrieveConvertedControllerV1IntegrationTest :
@@ -36,11 +37,24 @@ class RetrieveConvertedControllerV1IntegrationTest :
 
     @BeforeEach
     fun cleanRedisAndMocks() {
-        redisTemplate.connectionFactory
-            ?.connection
-            ?.serverCommands()
-            ?.flushAll()
+        val cacheKeys = redisTemplate.keys("exchangeRate:*")
+        if (cacheKeys != null) redisTemplate.delete(cacheKeys)
+        redisTemplate.opsForStream<String, String>().trim("exchange-rate-fetched-events", 0)
         reset(exchangeRateClientPort)
+    }
+
+    private fun awaitCache(
+        key: String,
+        timeout: Duration = Duration.ofSeconds(3),
+    ): String? {
+        val deadline = System.currentTimeMillis() + timeout.toMillis()
+        var value: String?
+        do {
+            value = redisTemplate.opsForValue().get(key)
+            if (value != null) return value
+            Thread.sleep(100)
+        } while (System.currentTimeMillis() < deadline)
+        return null
     }
 
     @Test
@@ -65,7 +79,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .body("convertedAmount", equalTo(510.00f))
             .body("targetCurrency", equalTo("BRL"))
 
-        val cached = redisTemplate.opsForValue().get("exchangeRate:USD:BRL")
+        val cached = awaitCache("exchangeRate:USD:BRL")
         assertThat(cached).isNotBlank()
     }
 
@@ -95,6 +109,8 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .then()
             .statusCode(200)
             .body("exchangeRateUsed", equalTo(5.10f))
+
+        awaitCache("exchangeRate:USD:BRL")
 
         verify(exchangeRateClientPort, times(1)).fetchNearestPriorRate(
             TargetCurrency("USD"),
@@ -131,7 +147,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             java.time.LocalDate.parse("2026-01-16"),
         )
 
-        val cached = redisTemplate.opsForValue().get("exchangeRate:USD:BRL")
+        val cached = awaitCache("exchangeRate:USD:BRL")
         val cacheValue = objectMapper.readTree(cached)
         assertThat(cacheValue.path("rate").asText()).isEqualTo("5.20")
     }
