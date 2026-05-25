@@ -91,8 +91,9 @@ class GlobalExceptionHandler {
         ex: org.springframework.http.converter.HttpMessageNotReadableException,
     ): ResponseEntity<ProblemDetail> {
         val message = ex.cause?.message ?: ex.message ?: "Malformed request body"
-        val deserializeErrorMsg = "Cannot deserialize value of type java.math.BigDecimal from " +
-            "String \"abc\": not a valid representation"
+        val deserializeErrorMsg =
+            "Cannot deserialize value of type java.math.BigDecimal from " +
+                "String \"abc\": not a valid representation"
         val fieldErrors =
             listOf(
                 mapOf(

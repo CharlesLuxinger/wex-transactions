@@ -42,3 +42,19 @@ out/
 # Added by code-review-graph
 graphify-out/cache/
 .code-review-graph/
+
+# Test logs and artifacts
+*.log
+test-output.txt
+full-test.log
+fulltest.log
+treasury-test.log
+hs_err_*.log
+replay_*.log
+
+# Build automation artifacts
+.sisyphus/ralph-loop.local.md
+
+# Generated graphs (except tracked source specs)
+graphify-out/
+!graphify-out/.gitkeep
