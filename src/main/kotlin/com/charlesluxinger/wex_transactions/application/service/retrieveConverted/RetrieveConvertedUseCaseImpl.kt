@@ -1,5 +1,6 @@
 package com.charlesluxinger.wex_transactions.application.service.retrieveConverted
 
+import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
@@ -8,15 +9,20 @@ import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverte
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedResponse
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCachePort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
+import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateEventPort
+import com.charlesluxinger.wex_transactions.domain.event.ExchangeRateFetchedEvent
+import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.springframework.stereotype.Service
 import java.math.RoundingMode
+import java.time.LocalDate
 
 @Service
 class RetrieveConvertedUseCaseImpl(
     private val purchaseRepositoryPort: PurchaseRepositoryPort,
     private val exchangeRateCachePort: ExchangeRateCachePort,
     private val exchangeRateClientPort: ExchangeRateClientPort,
+    private val exchangeRateEventPort: ExchangeRateEventPort,
 ) : RetrieveConvertedQueryPort {
     override fun retrieveConverted(query: RetrieveConvertedQuery): RetrieveConvertedResponse {
         val purchase =
@@ -26,22 +32,12 @@ class RetrieveConvertedUseCaseImpl(
         val sourceCurrency = purchase.transactionCurrency
         val targetCurrency = TargetCurrency(query.targetCurrency)
         val rateDate = purchase.transactionDate.value.toLocalDate()
-        val cachedRate = exchangeRateCachePort.getRate(sourceCurrency, targetCurrency)
-
         val rate =
-            cachedRate
-                ?: exchangeRateClientPort
-                    .fetchNearestPriorRate(
-                        sourceCurrency = sourceCurrency,
-                        targetCurrency = targetCurrency,
-                        rateDate = rateDate,
-                    )?.also { fetchedRate ->
-                        exchangeRateCachePort.saveRate(
-                            sourceCurrency = sourceCurrency,
-                            targetCurrency = targetCurrency,
-                            rate = fetchedRate,
-                        )
-                    } ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
+            exchangeRateCachePort.getRate(sourceCurrency, targetCurrency)
+                ?: fetchClient(sourceCurrency, targetCurrency, rateDate)
+                    ?.also { publishToCache(it, purchase) }
+
+        rate ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
 
         val convertedAmount =
             purchase.transactionAmount
@@ -58,6 +54,34 @@ class RetrieveConvertedUseCaseImpl(
             targetCurrency = targetCurrency.code,
             createdAt = purchase.createdAt,
         )
+    }
+
+    private fun fetchClient(
+        sourceCurrency: TargetCurrency,
+        targetCurrency: TargetCurrency,
+        rateDate: LocalDate,
+    ): ExchangeRate? =
+        exchangeRateClientPort.fetchNearestPriorRate(
+            sourceCurrency = sourceCurrency,
+            targetCurrency = targetCurrency,
+            rateDate = rateDate,
+        )
+
+    private fun publishToCache(
+        rate: ExchangeRate,
+        purchase: Purchase,
+    ) {
+        runCatching {
+            exchangeRateEventPort.publish(
+                ExchangeRateFetchedEvent(
+                    sourceCurrency = rate.sourceCurrency.code,
+                    targetCurrency = rate.targetCurrency.code,
+                    rate = rate.rate,
+                    retrievedAt = rate.retrievedAt,
+                    rateDate = purchase.transactionDate.value.toLocalDate(),
+                ),
+            )
+        }
     }
 
     companion object {
