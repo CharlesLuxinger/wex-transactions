@@ -16,6 +16,7 @@ import org.springframework.data.redis.core.ValueOperations
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
+import org.mockito.ArgumentMatchers.any
 
 class RedisExchangeRateCacheAdapterTest {
     private val stringRedisTemplate = mock(StringRedisTemplate::class.java)
@@ -94,7 +95,7 @@ class RedisExchangeRateCacheAdapterTest {
                 retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
             )
 
-        `when`(brokenMapper.writeValueAsString(org.mockito.ArgumentMatchers.any())).thenThrow(RuntimeException("boom"))
+        `when`(brokenMapper.writeValueAsString(any())).thenThrow(RuntimeException("boom"))
 
         safeAdapter.saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), rate)
 

@@ -23,6 +23,7 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
+import org.mockito.ArgumentMatchers.anyMap
 
 class RedisExchangeRateEventAdapterTest {
     private val stringRedisTemplate = mock(StringRedisTemplate::class.java)
@@ -63,8 +64,11 @@ class RedisExchangeRateEventAdapterTest {
     fun `publish failure does not propagate`() {
         val event = sampleEvent()
         `when`(stringRedisTemplate.opsForStream<String, String>()).thenReturn(streamOperations)
-        val expectedPayload = mapOf(streamProperties.payloadField to objectMapper.writeValueAsString(event))
-        doThrow(RuntimeException("boom")).`when`(streamOperations).add(streamProperties.key, expectedPayload)
+        doThrow(
+            RuntimeException("boom"),
+        ).`when`(
+            streamOperations,
+        ).add(eq(streamProperties.key), anyMap())
 
         val logger = LoggerFactory.getLogger(RedisExchangeRateEventAdapter::class.java) as Logger
         val appender = ListAppender<ILoggingEvent>()
@@ -106,7 +110,7 @@ class RedisExchangeRateEventAdapterTest {
 
         @Suppress("UNCHECKED_CAST")
         val keyCaptor = ArgumentCaptor.forClass(String::class.java)
-        verify(streamOperations).add(keyCaptor.capture(), org.mockito.ArgumentMatchers.anyMap())
+        verify(streamOperations).add(keyCaptor.capture(), anyMap())
         assertEquals(customProperties.key, keyCaptor.value)
     }
 
