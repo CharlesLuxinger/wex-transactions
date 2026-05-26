@@ -6,6 +6,7 @@ import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.memberProperties
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
@@ -86,12 +87,14 @@ class TransactionDateTest {
 
     @Test
     fun `should reject invalid ISO-8601 format`() {
+        val rawInput = "10/01/2026 15:30:45"
         val error =
             assertFailsWith<IllegalArgumentException> {
-                TransactionDate("10/01/2026 15:30:45")
+                TransactionDate(rawInput)
             }
 
         assertTrue(error.message?.contains("Invalid ISO-8601 transaction date") == true)
+        assertFalse(error.message?.contains(rawInput) == true)
     }
 
     @Test

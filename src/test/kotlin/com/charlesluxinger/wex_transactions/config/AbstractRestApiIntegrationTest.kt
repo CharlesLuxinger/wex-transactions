@@ -29,6 +29,7 @@ abstract class AbstractRestApiIntegrationTest :
     fun configureRestAssured() {
         RestAssured.baseURI = "http://localhost"
         RestAssured.port = serverPort
+        RestAssured.enableLoggingOfRequestAndResponseIfValidationFails()
     }
 
     @AfterEach

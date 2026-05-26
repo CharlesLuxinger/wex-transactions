@@ -1,28 +1,31 @@
 package com.charlesluxinger.wex_transactions.infra.client.purchase
 
 import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTest
-import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
-import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
-import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
-import org.hamcrest.Matchers.equalTo
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.containing
+import com.github.tomakehurst.wiremock.client.WireMock.equalTo as wireMockEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import org.assertj.core.api.Assertions.assertThat
+import org.hamcrest.Matchers.equalTo as hamcrestEqualTo
+import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.notNullValue
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Import
-import org.springframework.context.annotation.Primary
-import org.springframework.context.annotation.Profile
 import org.springframework.test.context.ActiveProfiles
-import java.math.BigDecimal
-import java.time.Instant
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 
 @ActiveProfiles("test")
-@Import(StubExchangeRateClientConfig::class)
 class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
     @Test
     @DisplayName("Should successfully store a valid purchase transaction")
     fun `should store purchase successfully`() {
+        stubTreasuryRate("1.00")
+
         val payload =
             mapOf(
                 "description" to "Lunch at Restaurant",
@@ -37,15 +40,72 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .`when`()
             .post("/api/v1/purchases")
             .then()
-            .statusCode(201) // HTTP 201 Created
+            .statusCode(201)
             .body("id", notNullValue())
-            .body("description", equalTo("Lunch at Restaurant"))
-            .body("transactionAmount", equalTo(15.50f))
-            .body("transactionCurrency", equalTo("USD"))
-            .body("transactionDate", equalTo("2026-05-23T12:00:00Z"))
-            .body("targetCurrency", equalTo("EUR"))
-            .body("exchangeRate", equalTo(1.0f))
-            .body("convertedAmount", equalTo(15.50f))
+            .body("description", hamcrestEqualTo("Lunch at Restaurant"))
+            .body("transactionAmount", hamcrestEqualTo(15.50f))
+            .body("transactionCurrency", hamcrestEqualTo("USD"))
+            .body("transactionDate", hamcrestEqualTo("2026-05-23T12:00:00Z"))
+            .body("targetCurrency", hamcrestEqualTo("EUR"))
+            .body("exchangeRate", hamcrestEqualTo(1.0f))
+            .body("convertedAmount", hamcrestEqualTo(15.50f))
+    }
+
+    @Test
+    @DisplayName("Should create two distinct purchases for duplicate POST body")
+    fun `should create distinct purchases for duplicate post body`() {
+        stubTreasuryRate("1.00")
+
+        val payload =
+            mapOf(
+                "description" to "Lunch at Restaurant",
+                "transactionAmount" to 15.50,
+                "transactionCurrency" to "USD",
+                "transactionDate" to "2026-05-23T12:00:00Z",
+                "targetCurrency" to "EUR",
+            )
+
+        val firstId =
+            givenJson()
+                .body(payload)
+                .`when`()
+                .post("/api/v1/purchases")
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("description", hamcrestEqualTo("Lunch at Restaurant"))
+                .body("transactionAmount", hamcrestEqualTo(15.50f))
+                .body("transactionCurrency", hamcrestEqualTo("USD"))
+                .body("transactionDate", hamcrestEqualTo("2026-05-23T12:00:00Z"))
+                .body("targetCurrency", hamcrestEqualTo("EUR"))
+                .body("exchangeRate", hamcrestEqualTo(1.0f))
+                .body("convertedAmount", hamcrestEqualTo(15.50f))
+                .extract()
+                .path<Int>("id")
+                .toLong()
+
+        val secondId =
+            givenJson()
+                .body(payload)
+                .`when`()
+                .post("/api/v1/purchases")
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("description", hamcrestEqualTo("Lunch at Restaurant"))
+                .body("transactionAmount", hamcrestEqualTo(15.50f))
+                .body("transactionCurrency", hamcrestEqualTo("USD"))
+                .body("transactionDate", hamcrestEqualTo("2026-05-23T12:00:00Z"))
+                .body("targetCurrency", hamcrestEqualTo("EUR"))
+                .body("exchangeRate", hamcrestEqualTo(1.0f))
+                .body("convertedAmount", hamcrestEqualTo(15.50f))
+                .extract()
+                .path<Int>("id")
+                .toLong()
+
+        assertThat(firstId).isNotNull()
+        assertThat(secondId).isNotNull()
+        assertThat(secondId).isNotEqualTo(firstId)
     }
 
     @Test
@@ -66,8 +126,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .post("/api/v1/purchases")
             .then()
             .statusCode(400)
-            .body("title", equalTo("Bad Request"))
-            .body("detail", equalTo("Description must not be blank"))
+            .body("title", hamcrestEqualTo("Bad Request"))
+            .body("detail", hamcrestEqualTo("Description must not be blank"))
+            .body("errors.message", hasItem("Description must not be blank"))
     }
 
     @Test
@@ -88,8 +149,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .post("/api/v1/purchases")
             .then()
             .statusCode(400)
-            .body("title", equalTo("Bad Request"))
-            .body("detail", equalTo("Description must have at most 50 characters"))
+            .body("title", hamcrestEqualTo("Bad Request"))
+            .body("detail", hamcrestEqualTo("Description must have at most 50 characters"))
+            .body("errors.message", hasItem("Description must have at most 50 characters"))
     }
 
     @Test
@@ -110,8 +172,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .post("/api/v1/purchases")
             .then()
             .statusCode(400)
-            .body("title", equalTo("Bad Request"))
-            .body("detail", equalTo("Transaction amount must be positive"))
+            .body("title", hamcrestEqualTo("Bad Request"))
+            .body("detail", hamcrestEqualTo("Transaction amount must be positive"))
+            .body("errors.message", hasItem("Transaction amount must be positive"))
     }
 
     @Test
@@ -132,8 +195,8 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .post("/api/v1/purchases")
             .then()
             .statusCode(400)
-            .body("title", equalTo("Bad Request"))
-            .body("detail", equalTo("Invalid ISO-8601 transaction date: invalid-date"))
+            .body("title", hamcrestEqualTo("Bad Request"))
+            .body("detail", hamcrestEqualTo("Invalid ISO-8601 transaction date format"))
     }
 
     @Test
@@ -143,9 +206,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             mapOf(
                 "description" to "Book",
                 "transactionAmount" to 10.00,
-                "transactionCurrency" to "INVALID",
+                "transactionCurrency" to "USD",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "EUR",
+                "targetCurrency" to "INVALID",
             )
 
         givenJson()
@@ -154,27 +217,87 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .post("/api/v1/purchases")
             .then()
             .statusCode(400)
-            .body("title", equalTo("Invalid Currency"))
-            .body("detail", equalTo("Invalid currency code: INVALID"))
+            .body("title", hamcrestEqualTo("Invalid Currency"))
+            .body("detail", hamcrestEqualTo("Invalid currency code"))
+            .body("errors.message", hasItem("Invalid currency code"))
     }
-}
 
-@Profile("test")
-@TestConfiguration
-class StubExchangeRateClientConfig {
-    @Bean
-    @Primary
-    fun stubExchangeRateClientPort(): ExchangeRateClientPort =
-        object : ExchangeRateClientPort {
-            override fun fetchRate(
-                from: TargetCurrency,
-                to: TargetCurrency,
-            ): ExchangeRate = ExchangeRate(BigDecimal.ONE, from, to, Instant.now())
+    @Test
+    @DisplayName("Should fail when transaction currency is not USD")
+    fun `should fail when transaction currency is not USD`() {
+        val payload =
+            mapOf(
+                "description" to "Book",
+                "transactionAmount" to 10.00,
+                "transactionCurrency" to "EUR",
+                "transactionDate" to "2026-05-23T12:00:00Z",
+                "targetCurrency" to "BRL",
+            )
 
-            override fun fetchNearestPriorRate(
-                sourceCurrency: TargetCurrency,
-                targetCurrency: TargetCurrency,
-                rateDate: java.time.LocalDate,
-            ): ExchangeRate? = null
+        givenJson()
+            .body(payload)
+            .`when`()
+            .post("/api/v1/purchases")
+            .then()
+            .statusCode(400)
+            .body("title", hamcrestEqualTo("Bad Request"))
+            .body("detail", hamcrestEqualTo("Transaction currency must be USD"))
+            .body("errors.message", hasItem("Transaction currency must be USD"))
+    }
+
+    private fun stubTreasuryRate(rate: String) {
+        server.stubFor(
+            get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                .withQueryParam(
+                    "fields",
+                    wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
+                ).withQueryParam("sort", wireMockEqualTo("-record_date"))
+                .withQueryParam("filter", containing("record_date:lte:"))
+                .withQueryParam("page[size]", wireMockEqualTo("10000"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                              "data": [
+                                {
+                                  "record_date": "2026-05-23",
+                                  "country": "Euro Area",
+                                  "currency": "Euro",
+                                  "country_currency_desc": "Euro Area-Euro",
+                                  "exchange_rate": "$rate"
+                                }
+                              ]
+                            }
+                            """.trimIndent(),
+                        ),
+                ),
+        )
+    }
+
+    companion object {
+        private val server = WireMockServer(0)
+
+        @JvmStatic
+        @BeforeAll
+        fun startWireMock() {
+            server.start()
         }
+
+        @JvmStatic
+        @AfterAll
+        fun stopWireMock() {
+            server.stop()
+        }
+
+        @JvmStatic
+        @DynamicPropertySource
+        fun registerProperties(registry: DynamicPropertyRegistry) {
+            registry.add("treasury.api.base-url") {
+                "${server.baseUrl()}/services/api/fiscal_service/v1/accounting/od"
+            }
+        }
+    }
 }

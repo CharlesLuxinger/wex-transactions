@@ -13,6 +13,8 @@ import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateEve
 import com.charlesluxinger.wex_transactions.domain.event.ExchangeRateFetchedEvent
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import java.math.RoundingMode
 import java.time.LocalDate
@@ -67,11 +69,12 @@ class RetrieveConvertedUseCaseImpl(
             rateDate = rateDate,
         )
 
+    @Suppress("TooGenericExceptionCaught")
     private fun publishToCache(
         rate: ExchangeRate,
         purchase: Purchase,
     ) {
-        runCatching {
+        try {
             exchangeRateEventPort.publish(
                 ExchangeRateFetchedEvent(
                     sourceCurrency = rate.sourceCurrency.code,
@@ -81,10 +84,24 @@ class RetrieveConvertedUseCaseImpl(
                     rateDate = purchase.transactionDate.value.toLocalDate(),
                 ),
             )
+        } catch (ex: Exception) {
+            logger.warn(
+                "[USECASE][CACHE_PUBLISH][FAILED] " +
+                    "traceId={} purchaseId={} sourceCurrency={} targetCurrency={} rateDate={} message={}",
+                MDC.get(TRACE_ID_KEY),
+                purchase.id,
+                rate.sourceCurrency.code,
+                rate.targetCurrency.code,
+                purchase.transactionDate.value.toLocalDate(),
+                ex.message,
+                ex,
+            )
         }
     }
 
     companion object {
+        private val logger = LoggerFactory.getLogger(RetrieveConvertedUseCaseImpl::class.java)
         private const val CONVERSION_SCALE = 2
+        private const val TRACE_ID_KEY = "traceId"
     }
 }

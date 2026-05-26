@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import com.charlesluxinger.wex_transactions.infra.adapter.event.config.toTraceId
 import java.util.UUID
+import java.util.regex.Pattern
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -36,7 +37,12 @@ class TraceIdFilter : OncePerRequestFilter() {
 
     private fun extractTraceId(request: HttpServletRequest): String {
         val header = request.getHeader(TRACE_ID_HEADER)
-        return if (!header.isNullOrBlank()) header.trim() else generateTraceId()
+        val sanitized = header?.trim()
+        return if (!sanitized.isNullOrBlank() && TRACE_ID_PATTERN.matcher(sanitized).matches()) {
+            sanitized
+        } else {
+            generateTraceId()
+        }
     }
 
     private fun generateTraceId(): String = UUID.randomUUID().toTraceId()
@@ -45,5 +51,6 @@ class TraceIdFilter : OncePerRequestFilter() {
         const val TRACE_ID_KEY = "traceId"
         const val TRACE_ID_HEADER = "X-Trace-Id"
         private const val ACTUATOR_PATH = "/actuator/"
+        private val TRACE_ID_PATTERN: Pattern = Pattern.compile("^[a-zA-Z0-9\\-]{1,64}$")
     }
 }

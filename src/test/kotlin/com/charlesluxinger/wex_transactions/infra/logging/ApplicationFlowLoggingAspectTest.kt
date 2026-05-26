@@ -41,6 +41,7 @@ class ApplicationFlowLoggingAspectTest {
     fun setUp() {
         val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
         val rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME)
+        rootLogger.level = Level.DEBUG
         listAppender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>()
         listAppender.context = loggerContext
         listAppender.start()
@@ -68,8 +69,8 @@ class ApplicationFlowLoggingAspectTest {
 
         assertNotNull(startLog, "Should have CONTROLLER START log")
         assertNotNull(successLog, "Should have CONTROLLER SUCCESS log")
-        assertTrue(successLog!!.formattedMessage.contains("elapsedMs="))
-        assertTrue(startLog!!.mdcPropertyMap["traceId"] == traceId)
+        assertTrue(successLog.formattedMessage.contains("elapsedMs="))
+        assertTrue(startLog.mdcPropertyMap["traceId"] == traceId)
     }
 
     @Test
@@ -85,8 +86,8 @@ class ApplicationFlowLoggingAspectTest {
 
         assertNotNull(startLog, "Should have USECASE START log")
         assertNotNull(successLog, "Should have USECASE SUCCESS log")
-        assertTrue(successLog!!.formattedMessage.contains("elapsedMs="))
-        assertTrue(startLog!!.mdcPropertyMap["traceId"] == traceId)
+        assertTrue(successLog.formattedMessage.contains("elapsedMs="))
+        assertTrue(startLog.mdcPropertyMap["traceId"] == traceId)
     }
 
     @Test
@@ -100,7 +101,7 @@ class ApplicationFlowLoggingAspectTest {
         val errorLog = logEvents.firstOrNull { it.formattedMessage.contains("[USECASE][ERROR]") }
 
         assertNotNull(errorLog, "Should have USECASE ERROR log")
-        assertTrue(errorLog!!.formattedMessage.contains("elapsedMs="))
+        assertTrue(errorLog.formattedMessage.contains("elapsedMs="))
         assertTrue(errorLog.level == Level.ERROR)
     }
 
@@ -126,10 +127,38 @@ class ApplicationFlowLoggingAspectTest {
         fun testController() = TestController()
     }
 
+    @Test
+    fun `should log only args summary at INFO and full args at DEBUG`() {
+        val traceId = UUID.randomUUID().toString().replace("-", "")
+        MDC.put("traceId", traceId)
+
+        testController.echo("very-sensitive-payload")
+
+        val logEvents = listAppender.list
+        val infoStartLog =
+            logEvents.firstOrNull {
+                it.level == Level.INFO &&
+                    it.formattedMessage.contains("[CONTROLLER][START]")
+            }
+        val debugDetailLog =
+            logEvents.firstOrNull {
+                it.level == Level.DEBUG &&
+                    it.formattedMessage.contains("[CONTROLLER][START][DETAIL]")
+            }
+
+        assertNotNull(infoStartLog, "Should have CONTROLLER START INFO log")
+        assertNotNull(debugDetailLog, "Should have CONTROLLER START DETAIL DEBUG log")
+        assertTrue(infoStartLog.formattedMessage.contains("argsSummary=count=1, types=[String]"))
+        assertTrue(!infoStartLog.formattedMessage.contains("very-sensitive-payload"))
+        assertTrue(debugDetailLog.formattedMessage.contains("very-sensitive-payload"))
+    }
+
     @Suppress("FunctionOnlyReturningConstant")
     @RestController
     class TestController {
         @GetMapping("/test")
         fun hello(): String = "hello"
+
+        fun echo(payload: String): String = payload
     }
 }

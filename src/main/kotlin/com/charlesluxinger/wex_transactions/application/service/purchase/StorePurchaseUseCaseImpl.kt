@@ -24,13 +24,16 @@ class StorePurchaseUseCaseImpl(
         }
         require(command.transactionAmount > BigDecimal.ZERO) { "Transaction amount must be positive" }
 
+        val centRoundedAmount = command.transactionAmount.setScale(CONVERSION_SCALE, RoundingMode.HALF_UP)
+
         val sourceCurrency = TargetCurrency(command.transactionCurrency)
+        require(sourceCurrency.code == "USD") { "Only USD purchases are supported" }
         val targetCurrency = TargetCurrency(command.targetCurrency)
         val transactionDate = TransactionDate(command.transactionDate)
 
         val rate = exchangeRateClientPort.fetchRate(sourceCurrency, targetCurrency)
         val convertedAmount =
-            command.transactionAmount
+            centRoundedAmount
                 .multiply(rate.rate)
                 .setScale(CONVERSION_SCALE, RoundingMode.HALF_UP)
 
@@ -38,7 +41,7 @@ class StorePurchaseUseCaseImpl(
             Purchase(
                 id = NEW_PURCHASE_PLACEHOLDER_ID,
                 description = command.description.trim(),
-                transactionAmount = command.transactionAmount,
+                transactionAmount = centRoundedAmount,
                 transactionCurrency = sourceCurrency,
                 transactionDate = transactionDate,
                 targetCurrency = targetCurrency,

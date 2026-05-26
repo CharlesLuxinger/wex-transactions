@@ -36,7 +36,7 @@ class TransactionDate(
                             ).toLocalDateTime()
                     }.recoverCatching { LocalDateTime.parse(input, DateTimeFormatter.ISO_LOCAL_DATE_TIME) }
                     .getOrElse {
-                        throw IllegalArgumentException("Invalid ISO-8601 transaction date: $raw")
+                        throw IllegalArgumentException("Invalid ISO-8601 transaction date format")
                     }
 
             return parsed.withNano(0)

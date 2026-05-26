@@ -26,10 +26,13 @@ class ApplicationFlowLoggingAspect {
         joinPoint: ProceedingJoinPoint,
     ): Any? {
         val signature = "${joinPoint.signature.declaringType.simpleName}.${joinPoint.signature.name}"
-        val args = joinPoint.args.joinToString(prefix = "[", postfix = "]") { arg -> arg?.toString() ?: "null" }
+        val argsSummary = summarizeArgs(joinPoint.args)
         val startedAt = System.currentTimeMillis()
 
-        logger.info("[$layer][START] {} args={}", signature, args)
+        logger.info("[$layer][START] {} argsSummary={}", signature, argsSummary)
+        if (logger.isDebugEnabled) {
+            logger.debug("[$layer][START][DETAIL] {} args={}", signature, renderFullArgs(joinPoint.args))
+        }
 
         return try {
             val result = joinPoint.proceed()
@@ -42,4 +45,12 @@ class ApplicationFlowLoggingAspect {
             throw ex
         }
     }
+
+    private fun summarizeArgs(args: Array<Any?>): String {
+        val argTypes = args.joinToString(prefix = "[", postfix = "]") { arg -> arg?.javaClass?.simpleName ?: "null" }
+        return "count=${args.size}, types=$argTypes"
+    }
+
+    private fun renderFullArgs(args: Array<Any?>): String =
+        args.joinToString(prefix = "[", postfix = "]") { arg -> arg?.toString() ?: "null" }
 }

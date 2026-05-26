@@ -38,7 +38,7 @@ class PurchaseTest {
 
     @Test
     fun `should accept BigDecimal amounts`() {
-        val amount = BigDecimal("1234567890.123456")
+        val amount = BigDecimal("1234567890.12")
         val rate = ExchangeRate(BigDecimal("1.234567"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
         val converted = amount.multiply(rate.rate).setScale(2, RoundingMode.HALF_UP)
 
@@ -147,7 +147,7 @@ class PurchaseTest {
 
     @Test
     fun `should handle very large amounts precision`() {
-        val amount = BigDecimal("999999999999.999999")
+        val amount = BigDecimal("999999999999.99")
         val rate = ExchangeRate(BigDecimal("9.999999"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
         val converted = amount.multiply(rate.rate).setScale(2, RoundingMode.HALF_UP)
 
