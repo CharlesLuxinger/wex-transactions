@@ -64,7 +64,7 @@ jobs:
           branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
 
       - name: Add coverage to PR summary
-        if: always()
+        if: always() && (github.event_name == 'pull_request' || github.event_name == 'push')
         uses: madrapps/jacoco-report@v1.7.1
         with:
           paths: ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
