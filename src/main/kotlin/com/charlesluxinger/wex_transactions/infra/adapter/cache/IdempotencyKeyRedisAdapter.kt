@@ -4,6 +4,7 @@ import com.charlesluxinger.wex_transactions.domain.model.IdempotencyKey
 import com.charlesluxinger.wex_transactions.domain.port.outbound.IdempotencyKeyPort
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.core.JsonProcessingException
+import org.slf4j.LoggerFactory
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
 import java.util.concurrent.TimeUnit
@@ -22,6 +23,7 @@ class IdempotencyKeyRedisAdapter(
         // 90 days in seconds: 90 * 24 * 60 * 60
         private const val IDEMPOTENCY_TTL_SECONDS = 7_776_000L
         private const val IDEMPOTENCY_KEY_PREFIX = "idempotency:"
+        private val logger = LoggerFactory.getLogger(IdempotencyKeyRedisAdapter::class.java)
     }
 
     override fun store(
@@ -35,12 +37,12 @@ class IdempotencyKeyRedisAdapter(
         } catch (e: JsonProcessingException) {
             // Log but do not throw; cache failure should not block purchase creation
             // Fallback to database UNIQUE constraint
-            System.err.println("Failed to serialize idempotency cache value for key=${key.value}: ${e.message}")
+            logger.warn("Failed to serialize idempotency cache value for key={}", key.value, e)
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception,
         ) {
             // Catch other Redis/network errors; fail gracefully
-            System.err.println("Failed to store idempotency key in Redis: ${e.message}")
+            logger.warn("Failed to store idempotency key in Redis", e)
         }
     }
 
@@ -52,13 +54,13 @@ class IdempotencyKeyRedisAdapter(
             (parsed["purchaseId"] as? Number)?.toLong()
         } catch (e: JsonProcessingException) {
             // Log but do not throw; cache miss should fall through to database
-            System.err.println("Failed to deserialize idempotency cache value for key=${key.value}: ${e.message}")
+            logger.warn("Failed to deserialize idempotency cache value for key={}", key.value, e)
             null
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception,
         ) {
             // Catch other Redis/network errors; fail gracefully
-            System.err.println("Failed to retrieve idempotency key from Redis: ${e.message}")
+            logger.warn("Failed to retrieve idempotency key from Redis", e)
             null
         }
     }

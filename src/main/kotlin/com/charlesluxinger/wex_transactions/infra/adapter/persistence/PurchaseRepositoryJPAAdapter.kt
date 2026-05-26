@@ -41,7 +41,7 @@ class PurchaseRepositoryJPAAdapter(
             )
 
             throw IdempotencyKeyConflictException(
-                idempotencyKey = key.value.toString(),
+                idempotencyKey = key.value,
                 message =
                     "Idempotency key already exists for another purchase; " +
                         "conflict detected for key=${key.value}",
