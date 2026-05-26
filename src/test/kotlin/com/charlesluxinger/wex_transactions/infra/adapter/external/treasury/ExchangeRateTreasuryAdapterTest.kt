@@ -49,12 +49,26 @@ class ExchangeRateTreasuryAdapterTest {
         ).thenAnswer { invocation ->
             capturedFilter = invocation.getArgument(1)
             TreasuryExchangeRateResponse(data = emptyList())
-        }
+        }.thenReturn(
+            TreasuryExchangeRateResponse(
+                data =
+                    listOf(
+                        TreasuryRateRecord(
+                            recordDate = "2026-05-20",
+                            country = "Brazil",
+                            currency = "Real",
+                            countryCurrencyDesc = "Brazil-Real",
+                            exchangeRate = "5.25",
+                        ),
+                    ),
+            ),
+        )
 
         adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(capturedFilter).contains("record_date:lte:$rateDate")
         assertThat(capturedFilter).contains("record_date:gte:$minBoundary")
+        assertThat(capturedFilter).contains("country_currency_desc:eq:Brazil-Real")
     }
 
     @Test
@@ -82,11 +96,9 @@ class ExchangeRateTreasuryAdapterTest {
     }
 
     @Test
-    @DisplayName("Null data returns null rate")
+    @DisplayName("Null data returns null rate when descriptor exists")
     fun `null data returns null`() {
-        `when`(
-            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
-        ).thenReturn(TreasuryExchangeRateResponse(data = null))
+        stubRateLookupThenDescriptorExists()
 
         val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
@@ -94,15 +106,25 @@ class ExchangeRateTreasuryAdapterTest {
     }
 
     @Test
-    @DisplayName("Empty records list returns null rate")
+    @DisplayName("Empty records list returns null rate when descriptor exists")
     fun `empty records list returns null`() {
-        `when`(
-            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
-        ).thenReturn(TreasuryExchangeRateResponse(data = emptyList()))
+        stubRateLookupThenDescriptorExists()
 
         val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNull()
+    }
+
+    @Test
+    @DisplayName("Unknown currency descriptor is not supported")
+    fun `unknown currency descriptor is not supported`() {
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenReturn(TreasuryExchangeRateResponse(data = emptyList()))
+
+        val supported = adapter.isSupportedCurrency(TargetCurrency("Not-A-Real-Currency"))
+
+        assertThat(supported).isFalse()
     }
 
     @Test
@@ -214,6 +236,37 @@ class ExchangeRateTreasuryAdapterTest {
     }
 
     @Test
+    @DisplayName("Multiple currencies in payload selects requested target currency")
+    fun `multiple currencies selects requested target currency`() {
+        val afghanistanRecord =
+            TreasuryRateRecord(
+                recordDate = "2026-05-22",
+                country = "Afghanistan",
+                currency = "Afghani",
+                countryCurrencyDesc = "Afghanistan-Afghani",
+                exchangeRate = "70.86",
+            )
+        val brazilRecord =
+            TreasuryRateRecord(
+                recordDate = "2026-05-20",
+                country = "Brazil",
+                currency = "Real",
+                countryCurrencyDesc = "Brazil-Real",
+                exchangeRate = "5.90",
+            )
+
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenReturn(TreasuryExchangeRateResponse(data = listOf(afghanistanRecord, brazilRecord)))
+
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
+
+        assertThat(result).isNotNull
+        assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("5.90"))
+        assertThat(result.targetCurrency.value).isEqualTo("Brazil-Real")
+    }
+
+    @Test
     @DisplayName("Multiple records choose newest exchange rate")
     fun `multiple records choose newest record`() {
         val newestRecord =
@@ -260,7 +313,20 @@ class ExchangeRateTreasuryAdapterTest {
         ).thenAnswer { invocation ->
             capturedFilter = invocation.getArgument(1)
             TreasuryExchangeRateResponse(data = emptyList())
-        }
+        }.thenReturn(
+            TreasuryExchangeRateResponse(
+                data =
+                    listOf(
+                        TreasuryRateRecord(
+                            recordDate = "2026-05-20",
+                            country = "Brazil",
+                            currency = "Real",
+                            countryCurrencyDesc = "Brazil-Real",
+                            exchangeRate = "5.25",
+                        ),
+                    ),
+            ),
+        )
 
         val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
@@ -345,7 +411,7 @@ class ExchangeRateTreasuryAdapterTest {
                 retrievedAt = Instant.parse("2026-05-01T00:00:00Z"),
             )
 
-        `when`(exchangeRateCachePort.getLatestRate(usd, brazilReal)).thenReturn(staleRate)
+        `when`(exchangeRateCachePort.getEligibleRate(usd, brazilReal, rateDate)).thenReturn(staleRate)
 
         val result = adapter.fallback(usd, brazilReal, rateDate, RuntimeException("Treasury unavailable"))
 
@@ -357,10 +423,25 @@ class ExchangeRateTreasuryAdapterTest {
     @Test
     @DisplayName("Circuit open with no cache available throws exception")
     fun `circuit open with no cache available throws exception`() {
-        `when`(exchangeRateCachePort.getLatestRate(usd, brazilReal)).thenReturn(null)
+        `when`(exchangeRateCachePort.getEligibleRate(usd, brazilReal, rateDate)).thenReturn(null)
 
         org.junit.jupiter.api.assertThrows<com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException> {
             adapter.fallback(usd, brazilReal, rateDate, RuntimeException("Treasury unavailable"))
         }
+    }
+
+    private fun stubRateLookupThenDescriptorExists() {
+        val descriptorRecord =
+            TreasuryRateRecord(
+                recordDate = "2026-05-20",
+                country = "Brazil",
+                currency = "Real",
+                countryCurrencyDesc = "Brazil-Real",
+                exchangeRate = "5.25",
+            )
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenReturn(TreasuryExchangeRateResponse(data = emptyList()))
+            .thenReturn(TreasuryExchangeRateResponse(data = listOf(descriptorRecord)))
     }
 }

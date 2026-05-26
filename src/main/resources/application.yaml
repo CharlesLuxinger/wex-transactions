@@ -2,6 +2,15 @@ treasury:
   api:
     base-url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 spring:
   application:
     name: wex-transactions

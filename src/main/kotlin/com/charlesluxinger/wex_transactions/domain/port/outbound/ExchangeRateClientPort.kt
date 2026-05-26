@@ -10,4 +10,6 @@ interface ExchangeRateClientPort {
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
     ): ExchangeRate?
+
+    fun isSupportedCurrency(targetCurrency: TargetCurrency): Boolean
 }

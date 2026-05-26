@@ -64,6 +64,12 @@ docker compose logs redis
 
 Look for readiness markers indicating Redis is accepting connections.
 
+Optional live Treasury smoke test (not part of default CI):
+
+```bash
+RUN_LIVE_TREASURY_TESTS=true ./gradlew test --tests "com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.TreasuryLiveSmokeTest"
+```
+
 ## 5) Run Verification
 
 Run local quality and test commands (in this order):
@@ -97,7 +103,7 @@ curl -X POST http://localhost:8080/api/v1/purchases \
     "description": "Laptop charger",
     "transactionAmount": 49.99,
     "transactionCurrency": "United-States-Dollar",
-    "transactionDate": "2025-05-22T12:00:00",
+    "transactionDate": "2025-05-22T12:00:00Z"
   }'
 ```
 
@@ -164,6 +170,26 @@ docker compose down -v
 ```
 
 Then start the stack again.
+
+### Flyway checksum mismatch after migration edits
+
+Symptoms: app fails on startup with `Migration checksum mismatch for migration version N`.
+
+Cause: a Flyway migration file changed after it was already applied to a persistent database volume.
+
+Actions (pick one):
+
+1. **Local/dev reset (destructive):**
+   ```bash
+   docker compose down -v
+   docker compose up -d
+   ```
+2. **Repair existing schema history (keeps data):**
+   ```bash
+   docker compose exec app java -jar /app/app.jar --spring.flyway.repair=true
+   ```
+   Or run Flyway repair against the same JDBC URL/credentials used by the app.
+3. **Production:** never edit applied migrations; add a new `V2__...sql` migration instead.
 
 ### Docker daemon not running
 

@@ -1,18 +1,19 @@
 package com.charlesluxinger.wex_transactions.application.service.retrieveConverted
 
+import com.charlesluxinger.wex_transactions.domain.event.ExchangeRateFetchedEvent
 import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
+import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyException
+import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
+import com.charlesluxinger.wex_transactions.domain.model.toMonetaryScale
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedResponse
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCachePort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateEventPort
-import com.charlesluxinger.wex_transactions.domain.event.ExchangeRateFetchedEvent
-import com.charlesluxinger.wex_transactions.domain.model.Purchase
-import com.charlesluxinger.wex_transactions.domain.model.toMonetaryScale
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -33,18 +34,13 @@ class RetrieveConvertedUseCaseImpl(
                 ?: throw PurchaseNotFoundException(query.purchaseId)
 
         val sourceCurrency = purchase.transactionCurrency
-        val targetCurrency = TargetCurrency(query.targetCurrency)
+        val targetCurrency = TargetCurrency(query.targetCurrency.trim())
         val rateDate = purchase.transactionDate.value.toLocalDate()
         val rate =
-            exchangeRateCachePort.getRate(sourceCurrency, targetCurrency, rateDate)
+            exchangeRateCachePort.getEligibleRate(sourceCurrency, targetCurrency, rateDate)
                 ?: fetchFromClientOrFallback(sourceCurrency, targetCurrency, rateDate, purchase)
 
-        rate ?: throw RateUnavailableException(sourceCurrency.value, targetCurrency.value)
-
-        val convertedAmount =
-            purchase.transactionAmount
-                .multiply(rate.rate)
-                .toMonetaryScale()
+        rate ?: throw resolveUnavailableException(sourceCurrency, targetCurrency)
 
         return RetrieveConvertedResponse(
             purchaseId = purchase.id,
@@ -53,8 +49,8 @@ class RetrieveConvertedUseCaseImpl(
             transactionAmount = purchase.transactionAmount,
             transactionCurrency = purchase.transactionCurrency.value,
             exchangeRate = rate.rate,
-            convertedAmount = convertedAmount,
-            targetCurrency = targetCurrency.value,
+            convertedAmount = purchase.convertedAmount(rate.rate),
+            targetCurrency = rate.targetCurrency.value,
             createdAt = purchase.createdAt,
         )
     }
@@ -72,28 +68,43 @@ class RetrieveConvertedUseCaseImpl(
                     sourceCurrency = sourceCurrency,
                     targetCurrency = targetCurrency,
                     rateDate = rateDate,
-                )?.also { publishToCache(it, purchase) }
+                )?.also { fetchedRate ->
+                    if (fetchedRate.targetCurrency.value.equals(targetCurrency.value, ignoreCase = true)) {
+                        publishToCache(fetchedRate, purchase)
+                    }
+                }
         } catch (exception: Exception) {
-            val latestCachedRate =
-                exchangeRateCachePort.getLatestRate(
+            val eligibleCachedRate =
+                exchangeRateCachePort.getEligibleRate(
                     sourceCurrency = sourceCurrency,
                     targetCurrency = targetCurrency,
+                    rateDate = rateDate,
                 )
 
-            if (latestCachedRate != null) {
+            if (eligibleCachedRate != null) {
                 logger.warn(
                     "[USECASE][TREASURY_FETCH][FALLBACK_CACHE] sourceCurrency={} targetCurrency={} " +
                         "cachedRetrievedAt={} message={}",
                     sourceCurrency.value,
                     targetCurrency.value,
-                    latestCachedRate.retrievedAt,
+                    eligibleCachedRate.retrievedAt,
                     exception.message,
                     exception,
                 )
-                latestCachedRate
+                eligibleCachedRate
             } else {
                 throw exception
             }
+        }
+
+    private fun resolveUnavailableException(
+        sourceCurrency: TargetCurrency,
+        targetCurrency: TargetCurrency,
+    ): Exception =
+        if (exchangeRateClientPort.isSupportedCurrency(targetCurrency)) {
+            RateUnavailableException(sourceCurrency.value, targetCurrency.value)
+        } else {
+            InvalidCurrencyException(targetCurrency.value)
         }
 
     @Suppress("TooGenericExceptionCaught")

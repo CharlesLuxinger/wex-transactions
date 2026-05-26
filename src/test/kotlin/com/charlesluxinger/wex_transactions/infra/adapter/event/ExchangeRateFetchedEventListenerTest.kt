@@ -79,7 +79,7 @@ class ExchangeRateFetchedEventListenerTest {
     fun `failure path should catch cache exception log and not rethrow`() {
         val failingCachePort =
             object : ExchangeRateCachePort {
-                override fun getRate(
+                override fun getEligibleRate(
                     sourceCurrency: TargetCurrency,
                     targetCurrency: TargetCurrency,
                     rateDate: LocalDate,
@@ -91,11 +91,6 @@ class ExchangeRateFetchedEventListenerTest {
                     rateDate: LocalDate,
                     rate: ExchangeRate,
                 ): Unit = throw IOException("cache unavailable")
-
-                override fun getLatestRate(
-                    sourceCurrency: TargetCurrency,
-                    targetCurrency: TargetCurrency,
-                ): ExchangeRate? = null
             }
         val listener = createListener(failingCachePort)
         val expectedRateDate = LocalDate.parse("2026-01-16")

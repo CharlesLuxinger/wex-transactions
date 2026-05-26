@@ -12,7 +12,32 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import java.net.URI
+
+private const val HTTP_CLIENT_ERROR_MAX = 499
+
+private fun mapFeignException(ex: FeignException): Triple<HttpStatus, String, String> =
+    when (ex.status()) {
+        HttpStatus.TOO_MANY_REQUESTS.value() ->
+            Triple(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "Too Many Requests",
+                "Dependent service rate limit exceeded",
+            )
+        in HttpStatus.BAD_REQUEST.value()..HTTP_CLIENT_ERROR_MAX ->
+            Triple(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "Conversion Unavailable",
+                "Dependent service rejected the conversion request",
+            )
+        else ->
+            Triple(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Service Unavailable",
+                "Dependent service unavailable",
+            )
+    }
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -83,18 +108,37 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail)
     }
 
-    @ExceptionHandler(FeignException::class)
-    fun handleFeignException(
-        @Suppress("UnusedParameter") ex: FeignException,
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun handleMethodArgumentTypeMismatchException(
+        ex: MethodArgumentTypeMismatchException,
     ): ResponseEntity<ProblemDetail> {
+        val parameterName = ex.name ?: "parameter"
         val problemDetail =
             ProblemDetail.forStatusAndDetail(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "Dependent service unavailable",
+                HttpStatus.BAD_REQUEST,
+                "Invalid value for $parameterName",
             )
-        problemDetail.title = "Service Unavailable"
+        problemDetail.title = "Bad Request"
         problemDetail.type = URI.create("about:blank")
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problemDetail)
+        problemDetail.setProperty(
+            "errors",
+            listOf(
+                mapOf(
+                    "field" to parameterName,
+                    "message" to "Invalid value for $parameterName",
+                ),
+            ),
+        )
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail)
+    }
+
+    @ExceptionHandler(FeignException::class)
+    fun handleFeignException(ex: FeignException): ResponseEntity<ProblemDetail> {
+        val (httpStatus, title, detail) = mapFeignException(ex)
+        val problemDetail = ProblemDetail.forStatusAndDetail(httpStatus, detail)
+        problemDetail.title = title
+        problemDetail.type = URI.create("about:blank")
+        return ResponseEntity.status(httpStatus).body(problemDetail)
     }
 
     @ExceptionHandler(IllegalStateException::class)

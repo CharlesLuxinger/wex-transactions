@@ -146,6 +146,51 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
     }
 
     @Test
+    @DisplayName("Should fail when transaction amount is zero")
+    fun `should fail when transaction amount is zero`() {
+        val payload =
+            mapOf(
+                "description" to "Book",
+                "transactionAmount" to 0,
+                "transactionCurrency" to "United-States-Dollar",
+                "transactionDate" to "2026-05-23T12:00:00Z",
+                "targetCurrency" to "Brazil-Real",
+            )
+
+        givenJson()
+            .body(payload)
+            .`when`()
+            .post("/api/v1/purchases")
+            .then()
+            .statusCode(400)
+            .body("title", hamcrestEqualTo("Bad Request"))
+            .body("detail", hamcrestEqualTo("Transaction amount must be positive"))
+    }
+
+    @Test
+    @DisplayName("Should round excessive decimal precision to nearest cent on store")
+    fun `should round excessive decimal precision to nearest cent on store`() {
+        stubTreasuryRate("1.00")
+
+        val payload =
+            mapOf(
+                "description" to "Precision",
+                "transactionAmount" to 10.125,
+                "transactionCurrency" to "United-States-Dollar",
+                "transactionDate" to "2026-05-23T12:00:00Z",
+                "targetCurrency" to "Brazil-Real",
+            )
+
+        givenJson()
+            .body(payload)
+            .`when`()
+            .post("/api/v1/purchases")
+            .then()
+            .statusCode(201)
+            .body("transactionAmount", hamcrestEqualTo(10.13f))
+    }
+
+    @Test
     @DisplayName("Should fail when transaction amount is non-positive")
     fun `should fail when transaction amount is non-positive`() {
         val payload =

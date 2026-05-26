@@ -92,6 +92,7 @@ class RetrieveConvertedRateLimiterIntegrationTest :
                     wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
                 ).withQueryParam("sort", wireMockEqualTo("-record_date"))
                 .withQueryParam("filter", containing("record_date:lte:"))
+                .withQueryParam("filter", containing("country_currency_desc:eq:Brazil-Real"))
                 .withQueryParam("page[size]", wireMockEqualTo("10000"))
                 .willReturn(
                     aResponse()

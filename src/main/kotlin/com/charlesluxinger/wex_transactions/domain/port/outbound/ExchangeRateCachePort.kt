@@ -5,7 +5,7 @@ import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import java.time.LocalDate
 
 interface ExchangeRateCachePort {
-    fun getRate(
+    fun getEligibleRate(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
@@ -17,9 +17,4 @@ interface ExchangeRateCachePort {
         rateDate: LocalDate,
         rate: ExchangeRate,
     )
-
-    fun getLatestRate(
-        sourceCurrency: TargetCurrency,
-        targetCurrency: TargetCurrency,
-    ): ExchangeRate?
 }

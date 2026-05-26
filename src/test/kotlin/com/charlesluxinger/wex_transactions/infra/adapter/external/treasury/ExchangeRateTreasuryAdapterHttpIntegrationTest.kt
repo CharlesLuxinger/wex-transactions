@@ -6,22 +6,27 @@ import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.ExchangeRateTreasuryAdapter.Companion.FIELDS
 import com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.ExchangeRateTreasuryAdapter.Companion.PAGE_SIZE
 import com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.ExchangeRateTreasuryAdapter.Companion.SORT
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.containing
+import com.github.tomakehurst.wiremock.client.WireMock.equalTo as wireMockEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import feign.FeignException
 import feign.RetryableException
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
-import org.junit.jupiter.api.AfterEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -38,35 +43,16 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
     @Autowired
     private lateinit var circuitBreakerRegistry: CircuitBreakerRegistry
 
-    @AfterEach
-    fun resetCircuitBreaker() {
+    @BeforeEach
+    fun resetWireMockAndCircuitBreaker() {
+        server.resetAll()
         circuitBreakerRegistry.circuitBreaker("treasury-rates").reset()
     }
 
     @Test
     @DisplayName("Adapter fetches treasury rate via real HTTP client")
     fun `adapter fetches treasury rate via http`() {
-        repeat(3) {
-            server.enqueue(
-                MockResponse()
-                    .setResponseCode(200)
-                    .setBody(
-                        """
-                        {
-                          "data": [
-                            {
-                              "record_date": "2026-05-20",
-                              "country": "Brazil",
-                              "currency": "Real",
-                              "country_currency_desc": "Brazil-Real",
-                              "exchange_rate": "5.75"
-                            }
-                          ]
-                        }
-                        """.trimIndent(),
-                    ).addHeader("Content-Type", "application/json"),
-            )
-        }
+        stubSuccessRate("5.75")
 
         val result =
             adapter.fetchNearestPriorRate(
@@ -76,23 +62,21 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
             )
 
         assertThat(result).isNotNull
+        assertThat(result!!.rate).isEqualByComparingTo("5.75")
 
-        val request = server.takeRequest()
-        assertThat(request.path).contains("/rates_of_exchange")
-        assertThat(request.path).contains("fields=")
-        assertThat(request.path).contains("filter=")
-        assertThat(request.path).contains("sort=")
+        server.verify(
+            getRequestedFor(urlPathEqualTo(TREASURY_PATH))
+                .withQueryParam("fields", wireMockEqualTo(FIELDS))
+                .withQueryParam("filter", containing("country_currency_desc:eq:Brazil-Real"))
+                .withQueryParam("sort", wireMockEqualTo(SORT)),
+        )
     }
 
     @Test
     @DisplayName("Adapter returns null when treasury payload has no data")
     fun `adapter returns null when treasury payload has no data`() {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("""{"data":null}""")
-                .addHeader("Content-Type", "application/json"),
-        )
+        stubEmptyRateWindow()
+        stubDescriptorExists()
 
         val result =
             adapter.fetchNearestPriorRate(
@@ -110,8 +94,7 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
         status: Int,
         expectedException: Class<out Throwable>,
     ) {
-        val beforeRequests = server.requestCount
-        enqueueFailureResponses(status)
+        stubFailureResponses(status)
 
         val thrown =
             Assertions.assertThrows(expectedException) {
@@ -126,14 +109,13 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
         assertThat(thrown).isInstanceOf(expectedException)
 
         val expectedRequests = if (status in RETRYABLE_STATUSES) 3 else 1
-        val actualRequests = server.requestCount - beforeRequests
-        assertThat(actualRequests).isEqualTo(expectedRequests)
+        server.verify(expectedRequests, getRequestedFor(urlPathEqualTo(TREASURY_PATH)))
     }
 
     @ParameterizedTest(name = "Adapter maps status {0} to RateUnavailableException")
     @MethodSource("treasuryFailureStatuses")
     fun `adapter converts treasury failures to rate unavailable`(status: Int) {
-        enqueueFailureResponses(status)
+        stubFailureResponses(status)
 
         val thrown =
             assertThrows<RateUnavailableException> {
@@ -148,21 +130,103 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
         assertThat(thrown.to).isEqualTo("Brazil-Real")
     }
 
-    private fun enqueueFailureResponses(status: Int) {
+    private fun stubSuccessRate(rate: String) {
+        server.stubFor(
+            get(urlPathEqualTo(TREASURY_PATH))
+                .withQueryParam("filter", containing("country_currency_desc:eq:Brazil-Real"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                              "data": [
+                                {
+                                  "record_date": "2026-05-20",
+                                  "country": "Brazil",
+                                  "currency": "Real",
+                                  "country_currency_desc": "Brazil-Real",
+                                  "exchange_rate": "$rate"
+                                }
+                              ]
+                            }
+                            """.trimIndent(),
+                        ),
+                ),
+        )
+    }
+
+    private fun stubEmptyRateWindow() {
+        server.stubFor(
+            get(urlPathEqualTo(TREASURY_PATH))
+                .withQueryParam("filter", containing("record_date:lte:2026-05-23"))
+                .withQueryParam("filter", containing("country_currency_desc:eq:Brazil-Real"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"data":[]}"""),
+                ),
+        )
+    }
+
+    private fun stubDescriptorExists() {
+        server.stubFor(
+            get(urlPathEqualTo(TREASURY_PATH))
+                .withQueryParam("filter", wireMockEqualTo("country_currency_desc:eq:Brazil-Real"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                              "data": [
+                                {
+                                  "record_date": "2026-05-20",
+                                  "country": "Brazil",
+                                  "currency": "Real",
+                                  "country_currency_desc": "Brazil-Real",
+                                  "exchange_rate": "5.75"
+                                }
+                              ]
+                            }
+                            """.trimIndent(),
+                        ),
+                ),
+        )
+    }
+
+    private fun stubFailureResponses(status: Int) {
         val attempts = if (status in RETRYABLE_STATUSES) 3 else 1
-        repeat(attempts) {
-            server.enqueue(
-                MockResponse()
-                    .setResponseCode(status)
-                    .setBody("""{"error":"failure"}""")
-                    .addHeader("Content-Type", "application/json"),
+        server.stubFor(
+            get(urlPathEqualTo(TREASURY_PATH))
+                .willReturn(
+                    aResponse()
+                        .withStatus(status)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"error":"failure"}"""),
+                ),
+        )
+        repeat(attempts - 1) {
+            server.stubFor(
+                get(urlPathEqualTo(TREASURY_PATH))
+                    .willReturn(
+                        aResponse()
+                            .withStatus(status)
+                            .withHeader("Content-Type", "application/json")
+                            .withBody("""{"error":"failure"}"""),
+                    ),
             )
         }
     }
 
     companion object {
-        private val server = MockWebServer()
-        private const val FILTER = "record_date:lte:2026-05-23,record_date:gte:2025-11-23"
+        private val server = WireMockServer(0)
+        private const val TREASURY_PATH = "/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"
+        private const val FILTER =
+            "record_date:lte:2026-05-23,record_date:gte:2025-11-23,country_currency_desc:eq:Brazil-Real"
         private val RETRYABLE_STATUSES = setOf(429, 503, 504)
 
         @JvmStatic
@@ -186,18 +250,17 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
         @JvmStatic
         @AfterAll
         fun stopServer() {
-            server.shutdown()
+            server.stop()
         }
 
         @JvmStatic
         @DynamicPropertySource
         fun registerProperties(registry: DynamicPropertyRegistry) {
             registry.add("treasury.api.base-url") {
-                server
-                    .url("/services/api/fiscal_service/v1/accounting/od")
-                    .toString()
-                    .removeSuffix("/")
+                "${server.baseUrl()}/services/api/fiscal_service/v1/accounting/od"
             }
+            registry.add("resilience4j.ratelimiter.instances.treasury-api.limit-for-period") { "100000" }
+            registry.add("resilience4j.ratelimiter.instances.treasury-api.timeout-duration") { "0s" }
         }
     }
 }

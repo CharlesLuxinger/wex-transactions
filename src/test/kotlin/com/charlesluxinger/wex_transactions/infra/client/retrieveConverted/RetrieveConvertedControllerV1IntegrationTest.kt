@@ -73,7 +73,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .statusCode(200)
             .body("exchangeRate", equalTo(5.10f))
             .body("convertedAmount", equalTo(510.00f))
-            .body("targetCurrency", equalTo("BRAZIL-REAL"))
+            .body("targetCurrency", equalTo("Brazil-Real"))
 
         val cached = awaitCache("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-16")
         assertThat(cached).isNotBlank()
@@ -139,6 +139,87 @@ class RetrieveConvertedControllerV1IntegrationTest :
         val cached = awaitCache("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-16")
         val cacheValue = objectMapper.readTree(cached)
         assertThat(cacheValue.path("rate").asText()).isEqualTo("5.20")
+    }
+
+    @Test
+    @DisplayName("Retrieve converted returns 400 for invalid target currency descriptor")
+    fun `retrieve converted returns 400 for invalid target currency descriptor`() {
+        stubTreasuryNoRateForDate("2026-01-16", "Not-A-Real-Currency", descriptorExists = false)
+        stubTreasuryDescriptorMissing("Not-A-Real-Currency")
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
+
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Not-A-Real-Currency")
+            .then()
+            .statusCode(400)
+            .body("title", equalTo("Invalid Currency"))
+            .body("detail", equalTo("Invalid currency code: Not-A-Real-Currency"))
+    }
+
+    @Test
+    @DisplayName("Retrieve converted returns 400 for malformed purchase id")
+    fun `retrieve converted returns 400 for malformed purchase id`() {
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/abc/converted?targetCurrency=Brazil-Real")
+            .then()
+            .statusCode(400)
+            .body("title", equalTo("Bad Request"))
+    }
+
+    @Test
+    @DisplayName("Retrieve converted does not reuse cache from different target currency")
+    fun `retrieve converted does not reuse cache from different target currency`() {
+        stubDefaultTreasuryRate("1.00")
+        stubTreasuryRateForDate("2026-01-16", "5.10", "Brazil-Real")
+        stubTreasuryNoRateForDate("2026-01-16", "Euro Area-Euro", descriptorExists = true)
+
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
+
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
+            .then()
+            .statusCode(200)
+
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Euro%20Area-Euro")
+            .then()
+            .statusCode(422)
+            .body("title", equalTo("Conversion Unavailable"))
+    }
+
+    @Test
+    @DisplayName("Retrieve converted ignores cache outside six month eligibility window")
+    fun `retrieve converted ignores cache outside six month eligibility window`() {
+        stubDefaultTreasuryRate("1.00")
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
+        val staleCachedRate =
+            """
+            {
+              "rate": "5.45",
+              "sourceCurrency": "United-States-Dollar",
+              "targetCurrency": "Brazil-Real",
+              "retrievedAt": "2025-01-01T12:00:00Z"
+            }
+            """.trimIndent()
+        redisTemplate.opsForValue().set("exchangeRate:United-States-Dollar:Brazil-Real:2025-01-01", staleCachedRate)
+
+        stubTreasuryNoRateForDate("2026-01-16", "Brazil-Real")
+
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
+            .then()
+            .statusCode(422)
+            .body("title", equalTo("Conversion Unavailable"))
     }
 
     @Test
@@ -337,14 +418,17 @@ class RetrieveConvertedControllerV1IntegrationTest :
                     wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
                 ).withQueryParam("sort", wireMockEqualTo("-record_date"))
                 .withQueryParam("filter", containing("record_date:lte:"))
+                .withQueryParam("filter", containing("country_currency_desc:eq:Brazil-Real"))
                 .withQueryParam("page[size]", wireMockEqualTo("10000"))
-                .willReturn(rateResponse(rate, "2026-01-15")),
+                .willReturn(rateResponse(rate, "2026-01-15", "Brazil-Real")),
         )
+        stubTreasuryDescriptorExists("Brazil-Real")
     }
 
     private fun stubTreasuryRateForDate(
         rateDate: String,
         rate: String,
+        targetCurrency: String = "Brazil-Real",
     ) {
         server.stubFor(
             get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
@@ -354,12 +438,18 @@ class RetrieveConvertedControllerV1IntegrationTest :
                     wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
                 ).withQueryParam("sort", wireMockEqualTo("-record_date"))
                 .withQueryParam("filter", containing("record_date:lte:$rateDate"))
+                .withQueryParam("filter", containing("country_currency_desc:eq:$targetCurrency"))
                 .withQueryParam("page[size]", wireMockEqualTo("10000"))
-                .willReturn(rateResponse(rate, rateDate)),
+                .willReturn(rateResponse(rate, rateDate, targetCurrency)),
         )
+        stubTreasuryDescriptorExists(targetCurrency)
     }
 
-    private fun stubTreasuryNoRateForDate(rateDate: String) {
+    private fun stubTreasuryNoRateForDate(
+        rateDate: String,
+        targetCurrency: String = "Brazil-Real",
+        descriptorExists: Boolean = true,
+    ) {
         server.stubFor(
             get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
                 .atPriority(1)
@@ -368,7 +458,53 @@ class RetrieveConvertedControllerV1IntegrationTest :
                     wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
                 ).withQueryParam("sort", wireMockEqualTo("-record_date"))
                 .withQueryParam("filter", containing("record_date:lte:$rateDate"))
+                .withQueryParam("filter", containing("country_currency_desc:eq:$targetCurrency"))
                 .withQueryParam("page[size]", wireMockEqualTo("10000"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"data\":[]}"),
+                ),
+        )
+        if (descriptorExists) {
+            stubTreasuryDescriptorExists(targetCurrency)
+        }
+    }
+
+    private fun stubTreasuryDescriptorExists(targetCurrency: String) {
+        server.stubFor(
+            get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                .atPriority(2)
+                .withQueryParam("filter", wireMockEqualTo("country_currency_desc:eq:$targetCurrency"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                              "data": [
+                                {
+                                  "record_date": "2026-01-15",
+                                  "country": "Brazil",
+                                  "currency": "Real",
+                                  "country_currency_desc": "$targetCurrency",
+                                  "exchange_rate": "1.00"
+                                }
+                              ]
+                            }
+                            """.trimIndent(),
+                        ),
+                ),
+        )
+    }
+
+    private fun stubTreasuryDescriptorMissing(targetCurrency: String) {
+        server.stubFor(
+            get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                .atPriority(1)
+                .withQueryParam("filter", wireMockEqualTo("country_currency_desc:eq:$targetCurrency"))
                 .willReturn(
                     aResponse()
                         .withStatus(200)
@@ -381,6 +517,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
     private fun rateResponse(
         rate: String,
         recordDate: String,
+        targetCurrency: String = "Brazil-Real",
     ) = aResponse()
         .withStatus(200)
         .withHeader("Content-Type", "application/json")
@@ -392,7 +529,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
                   "record_date": "$recordDate",
                   "country": "Brazil",
                   "currency": "Real",
-                  "country_currency_desc": "Brazil-Real",
+                  "country_currency_desc": "$targetCurrency",
                   "exchange_rate": "$rate"
                 }
               ]

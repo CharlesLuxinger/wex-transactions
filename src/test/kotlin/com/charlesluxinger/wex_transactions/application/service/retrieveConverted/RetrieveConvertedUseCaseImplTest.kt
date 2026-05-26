@@ -2,6 +2,7 @@ package com.charlesluxinger.wex_transactions.application.service.retrieveConvert
 
 import com.charlesluxinger.wex_transactions.domain.event.ExchangeRateFetchedEvent
 import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
+import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyException
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
@@ -76,7 +77,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         `when`(purchaseRepositoryPort.findById(1L)).thenReturn(purchase)
         `when`(
-            exchangeRateCachePort.getRate(
+            exchangeRateCachePort.getEligibleRate(
                 TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
@@ -105,7 +106,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         `when`(purchaseRepositoryPort.findById(2L)).thenReturn(purchase)
         `when`(
-            exchangeRateCachePort.getRate(
+            exchangeRateCachePort.getEligibleRate(
                 TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
@@ -138,9 +139,10 @@ class RetrieveConvertedUseCaseImplTest {
             purchase.transactionDate.value.toLocalDate(),
             fetchedRate,
         )
-        verify(exchangeRateCachePort, never()).getLatestRate(
+        verify(exchangeRateCachePort).getEligibleRate(
             TargetCurrency("United-States-Dollar"),
             TargetCurrency("Brazil-Real"),
+            purchase.transactionDate.value.toLocalDate(),
         )
     }
 
@@ -152,31 +154,32 @@ class RetrieveConvertedUseCaseImplTest {
         val staleCachedRate = sampleRate("5.45")
 
         `when`(purchaseRepositoryPort.findById(6L)).thenReturn(purchase)
+        val rateDate = purchase.transactionDate.value.toLocalDate()
         `when`(
-            exchangeRateCachePort.getRate(
+            exchangeRateCachePort.getEligibleRate(
                 TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
-                purchase.transactionDate.value.toLocalDate(),
+                rateDate,
             ),
         ).thenReturn(null)
+            .thenReturn(staleCachedRate)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
-                purchase.transactionDate.value.toLocalDate(),
+                rateDate,
             ),
         ).thenThrow(treasuryFailure)
-        `when`(
-            exchangeRateCachePort.getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real")),
-        ).thenReturn(staleCachedRate)
 
         val response = useCase.retrieveConverted(query)
 
         assertEquals(BigDecimal("5.45"), response.exchangeRate)
         assertEquals(BigDecimal("545.00"), response.convertedAmount)
-        verify(
-            exchangeRateCachePort,
-        ).getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"))
+        verify(exchangeRateCachePort, org.mockito.Mockito.times(2)).getEligibleRate(
+            TargetCurrency("United-States-Dollar"),
+            TargetCurrency("Brazil-Real"),
+            rateDate,
+        )
         verifyNoInteractions(exchangeRateEventPort)
 
         val fallbackWarningLog =
@@ -194,24 +197,22 @@ class RetrieveConvertedUseCaseImplTest {
         val query = RetrieveConvertedQuery(purchaseId = 7L, targetCurrency = "Brazil-Real")
         val treasuryFailure = RuntimeException("treasury connection reset")
 
+        val rateDate = purchase.transactionDate.value.toLocalDate()
         `when`(purchaseRepositoryPort.findById(7L)).thenReturn(purchase)
         `when`(
-            exchangeRateCachePort.getRate(
+            exchangeRateCachePort.getEligibleRate(
                 TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
-                purchase.transactionDate.value.toLocalDate(),
+                rateDate,
             ),
         ).thenReturn(null)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
-                purchase.transactionDate.value.toLocalDate(),
+                rateDate,
             ),
         ).thenThrow(treasuryFailure)
-        `when`(
-            exchangeRateCachePort.getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real")),
-        ).thenReturn(null)
 
         val thrown =
             assertThrows(RuntimeException::class.java) {
@@ -219,9 +220,11 @@ class RetrieveConvertedUseCaseImplTest {
             }
 
         assertSame(treasuryFailure, thrown)
-        verify(
-            exchangeRateCachePort,
-        ).getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"))
+        verify(exchangeRateCachePort, org.mockito.Mockito.times(2)).getEligibleRate(
+            TargetCurrency("United-States-Dollar"),
+            TargetCurrency("Brazil-Real"),
+            rateDate,
+        )
     }
 
     @Test
@@ -232,7 +235,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         `when`(purchaseRepositoryPort.findById(4L)).thenReturn(purchase)
         `when`(
-            exchangeRateCachePort.getRate(
+            exchangeRateCachePort.getEligibleRate(
                 TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
@@ -260,7 +263,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         assertEquals(BigDecimal("5.25"), response.exchangeRate)
         assertEquals(BigDecimal("525.00"), response.convertedAmount)
-        verify(exchangeRateCachePort).getRate(
+        verify(exchangeRateCachePort).getEligibleRate(
             TargetCurrency("United-States-Dollar"),
             TargetCurrency("Brazil-Real"),
             purchase.transactionDate.value.toLocalDate(),
@@ -296,7 +299,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         `when`(purchaseRepositoryPort.findById(3L)).thenReturn(purchase)
         `when`(
-            exchangeRateCachePort.getRate(
+            exchangeRateCachePort.getEligibleRate(
                 TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
@@ -309,9 +312,36 @@ class RetrieveConvertedUseCaseImplTest {
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(null)
+        `when`(exchangeRateClientPort.isSupportedCurrency(TargetCurrency("Brazil-Real"))).thenReturn(true)
 
         assertThrows(RateUnavailableException::class.java) {
             useCase.retrieveConverted(RetrieveConvertedQuery(3L, "Brazil-Real"))
+        }
+    }
+
+    @Test
+    fun `unsupported target currency throws invalid currency`() {
+        val purchase = samplePurchase(9L)
+
+        `when`(purchaseRepositoryPort.findById(9L)).thenReturn(purchase)
+        `when`(
+            exchangeRateCachePort.getEligibleRate(
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Not-A-Real-Currency"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(null)
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Not-A-Real-Currency"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(null)
+        `when`(exchangeRateClientPort.isSupportedCurrency(TargetCurrency("Not-A-Real-Currency"))).thenReturn(false)
+
+        assertThrows(InvalidCurrencyException::class.java) {
+            useCase.retrieveConverted(RetrieveConvertedQuery(9L, "Not-A-Real-Currency"))
         }
     }
 
@@ -334,6 +364,42 @@ class RetrieveConvertedUseCaseImplTest {
         )
 
     @Test
+    fun `treasury failure with cache outside eligibility window rethrows`() {
+        val purchase = samplePurchase(8L)
+        val query = RetrieveConvertedQuery(purchaseId = 8L, targetCurrency = "Brazil-Real")
+        val treasuryFailure = RuntimeException("treasury timeout")
+        val rateDate = purchase.transactionDate.value.toLocalDate()
+
+        `when`(purchaseRepositoryPort.findById(8L)).thenReturn(purchase)
+        `when`(
+            exchangeRateCachePort.getEligibleRate(
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+                rateDate,
+            ),
+        ).thenReturn(null)
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+                rateDate,
+            ),
+        ).thenThrow(treasuryFailure)
+
+        val thrown =
+            assertThrows(RuntimeException::class.java) {
+                useCase.retrieveConverted(query)
+            }
+
+        assertSame(treasuryFailure, thrown)
+        verify(exchangeRateCachePort, org.mockito.Mockito.times(2)).getEligibleRate(
+            TargetCurrency("United-States-Dollar"),
+            TargetCurrency("Brazil-Real"),
+            rateDate,
+        )
+    }
+
+    @Test
     fun `cache lookup passes transaction rate date`() {
         val purchase = samplePurchase(5L)
         val query = RetrieveConvertedQuery(purchaseId = 5L, targetCurrency = "Brazil-Real")
@@ -341,7 +407,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         `when`(purchaseRepositoryPort.findById(5L)).thenReturn(purchase)
         `when`(
-            exchangeRateCachePort.getRate(
+            exchangeRateCachePort.getEligibleRate(
                 TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
                 rateDate,
@@ -352,6 +418,6 @@ class RetrieveConvertedUseCaseImplTest {
 
         verify(
             exchangeRateCachePort,
-        ).getRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), rateDate)
+        ).getEligibleRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), rateDate)
     }
 }

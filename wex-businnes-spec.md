@@ -20,7 +20,6 @@ Currency
 Based upon purchase transactions previously submitted and stored, your application must provide a way to retrieve the
 stored purchase transactions converted to currencies supported by the Treasury Reporting Rates of Exchange API based
 upon the exchange rate active for the date of the purchase.
-https://fiscaldata.treasury.gov/datasets/treasury-reporting-rates-exchange/treasury-reporting-rates-of-exchange
 https://fiscaldata.treasury.gov/api-documentation/
 
 The retrieved purchase should include the identifier, the description, the transaction date, the original US dollar purchase

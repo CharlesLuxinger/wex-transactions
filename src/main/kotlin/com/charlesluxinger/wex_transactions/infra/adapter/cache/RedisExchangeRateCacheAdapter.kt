@@ -1,6 +1,7 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.cache
 
 import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
+import com.charlesluxinger.wex_transactions.domain.model.ExchangeRateLookupWindow
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCacheKeyBuilder
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCachePort
@@ -16,26 +17,25 @@ class RedisExchangeRateCacheAdapter(
     private val stringRedisTemplate: StringRedisTemplate,
     private val objectMapper: ObjectMapper,
 ) : ExchangeRateCachePort {
-    override fun getRate(
+    override fun getEligibleRate(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
     ): ExchangeRate? {
-        val key =
-            ExchangeRateCacheKeyBuilder.buildCacheKey(
-                sourceCurrency,
-                targetCurrency,
-                rateDate,
-            )
+        val pairPrefix = ExchangeRateCacheKeyBuilder.buildPairPrefix(sourceCurrency, targetCurrency)
+        val minDate = ExchangeRateLookupWindow.minEligibleDate(rateDate)
+
         return runCatching {
             stringRedisTemplate
-                .opsForValue()
-                .get(key)
-                ?.let { value -> objectMapper.readValue(value, ExchangeRateCacheValue::class.java).toDomain() }
+                .keys("$pairPrefix*")
+                .mapNotNull { key -> parseRateDateFromKey(key)?.let { keyDate -> key to keyDate } }
+                .filter { (_, keyDate) -> ExchangeRateLookupWindow.isEligible(keyDate, rateDate) }
+                .maxByOrNull { (_, keyDate) -> keyDate }
+                ?.let { (key, _) -> readRateForKey(key, targetCurrency) }
         }.onFailure { exception ->
             logger.warn(
-                "Failed to read exchange rate from cache for key={} due to {}",
-                key,
+                "Failed to read eligible exchange rate from cache for keyPrefix={} due to {}",
+                pairPrefix,
                 exception.javaClass.simpleName,
             )
         }.getOrNull()
@@ -47,6 +47,15 @@ class RedisExchangeRateCacheAdapter(
         rateDate: LocalDate,
         rate: ExchangeRate,
     ) {
+        if (!rate.targetCurrency.value.equals(targetCurrency.value, ignoreCase = true)) {
+            logger.warn(
+                "Skipping cache write due to target currency mismatch requested={} cached={}",
+                targetCurrency.value,
+                rate.targetCurrency.value,
+            )
+            return
+        }
+
         val key =
             ExchangeRateCacheKeyBuilder.buildCacheKey(
                 sourceCurrency,
@@ -67,29 +76,33 @@ class RedisExchangeRateCacheAdapter(
         }
     }
 
-    override fun getLatestRate(
-        sourceCurrency: TargetCurrency,
+    private fun readRateForKey(
+        key: String,
         targetCurrency: TargetCurrency,
     ): ExchangeRate? {
-        val pairPrefix = ExchangeRateCacheKeyBuilder.buildPairPrefix(sourceCurrency, targetCurrency)
-        return runCatching {
-            val keys = stringRedisTemplate.keys("$pairPrefix*").sortedDescending()
+        val value =
+            stringRedisTemplate
+                .opsForValue()
+                .get(key)
+                ?: return null
 
-            keys.firstNotNullOfOrNull { key ->
-                stringRedisTemplate
-                    .opsForValue()
-                    .get(key)
-                    ?.let { value ->
-                        objectMapper.readValue(value, ExchangeRateCacheValue::class.java).toDomain()
-                    }
-            }
-        }.onFailure { exception ->
+        val rate = objectMapper.readValue(value, ExchangeRateCacheValue::class.java).toDomain()
+        return if (rate.targetCurrency.value.equals(targetCurrency.value, ignoreCase = true)) {
+            rate
+        } else {
             logger.warn(
-                "Failed to read latest exchange rate from cache for keyPrefix={} due to {}",
-                pairPrefix,
-                exception.javaClass.simpleName,
+                "Ignoring cached rate for key={} due to target currency mismatch expected={} actual={}",
+                key,
+                targetCurrency.value,
+                rate.targetCurrency.value,
             )
-        }.getOrNull()
+            null
+        }
+    }
+
+    private fun parseRateDateFromKey(key: String): LocalDate? {
+        val datePart = key.substringAfterLast(':')
+        return runCatching { LocalDate.parse(datePart) }.getOrNull()
     }
 
     private companion object {
