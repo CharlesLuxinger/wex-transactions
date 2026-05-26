@@ -50,3 +50,7 @@ resilience4j:
         limit-for-period: 100
         limit-refresh-period: 1s
         timeout-duration: 0
+      treasury-api:
+        limit-for-period: 10
+        limit-refresh-period: 1m
+        timeout-duration: 5s

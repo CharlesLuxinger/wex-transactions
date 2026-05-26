@@ -6,6 +6,7 @@ import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import io.github.resilience4j.bulkhead.annotation.Bulkhead
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.LocalDate
@@ -23,6 +24,7 @@ class ExchangeRateTreasuryAdapter(
 
     @CircuitBreaker(name = TREASURY_RATES_RESILIENCE, fallbackMethod = "fallback")
     @Bulkhead(name = TREASURY_RATES_RESILIENCE, type = Bulkhead.Type.SEMAPHORE)
+    @RateLimiter(name = TREASURY_API_RATE_LIMITER)
     override fun fetchNearestPriorRate(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
@@ -76,6 +78,7 @@ class ExchangeRateTreasuryAdapter(
     companion object {
         private const val DEFAULT_WINDOW_MONTHS = 6L
         private const val TREASURY_RATES_RESILIENCE = "treasury-rates"
+        private const val TREASURY_API_RATE_LIMITER = "treasury-api"
         private val logger = LoggerFactory.getLogger(ExchangeRateTreasuryAdapter::class.java)
         const val FIELDS = "record_date,country,currency,country_currency_desc,exchange_rate"
         const val FILTER_FORMAT = "record_date:lte:%s,record_date:gte:%s"

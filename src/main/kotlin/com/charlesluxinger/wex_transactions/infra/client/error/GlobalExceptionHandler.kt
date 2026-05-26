@@ -4,6 +4,7 @@ import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyExceptio
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import feign.FeignException
+import io.github.resilience4j.ratelimiter.RequestNotPermitted
 import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
@@ -183,5 +184,17 @@ class GlobalExceptionHandler {
         problemDetail.title = "Conversion Unavailable"
         problemDetail.type = URI.create("about:blank")
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(problemDetail)
+    }
+
+    @ExceptionHandler(RequestNotPermitted::class)
+    fun handleRequestNotPermitted(ex: RequestNotPermitted): ResponseEntity<ProblemDetail> {
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.TOO_MANY_REQUESTS,
+                ex.message ?: "Rate limit exceeded",
+            )
+        problemDetail.title = "Too Many Requests"
+        problemDetail.type = URI.create("about:blank")
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(problemDetail)
     }
 }

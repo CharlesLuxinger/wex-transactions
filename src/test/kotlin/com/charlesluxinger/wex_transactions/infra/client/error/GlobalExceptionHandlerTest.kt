@@ -6,6 +6,8 @@ import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableExceptio
 import feign.FeignException
 import feign.Request
 import feign.Response
+import io.github.resilience4j.ratelimiter.RateLimiter
+import io.github.resilience4j.ratelimiter.RequestNotPermitted
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -171,5 +173,17 @@ class GlobalExceptionHandlerTest {
         assertThat(response.statusCode).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY)
         assertThat(response.body?.title).isEqualTo("Conversion Unavailable")
         assertThat(response.body?.detail).isEqualTo("Exchange rate unavailable: USD → BRL")
+    }
+
+    @Test
+    @DisplayName("RequestNotPermitted returns TOO_MANY_REQUESTS with expected title")
+    fun `handle request not permitted exception`() {
+        val ex = RequestNotPermitted.createRequestNotPermitted(RateLimiter.ofDefaults("treasury-api"))
+
+        val response = handler.handleRequestNotPermitted(ex)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
+        assertThat(response.body?.title).isEqualTo("Too Many Requests")
+        assertThat(response.body?.detail).contains("RateLimiter")
     }
 }
