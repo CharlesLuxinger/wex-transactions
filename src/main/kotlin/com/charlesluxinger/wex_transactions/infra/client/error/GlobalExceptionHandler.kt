@@ -4,6 +4,7 @@ import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyExceptio
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import feign.FeignException
+import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
@@ -14,6 +15,27 @@ import java.net.URI
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+    @ExceptionHandler(ConstraintViolationException::class)
+    fun handleConstraintViolationException(ex: ConstraintViolationException): ResponseEntity<ProblemDetail> {
+        val fieldErrors =
+            ex.constraintViolations.map {
+                mapOf(
+                    "field" to it.propertyPath.toString(),
+                    "message" to it.message,
+                )
+            }
+        val firstMessage = fieldErrors.firstOrNull()?.get("message")?.toString() ?: "Validation failed"
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                firstMessage,
+            )
+        problemDetail.title = "Bad Request"
+        problemDetail.type = URI.create("about:blank")
+        problemDetail.setProperty("errors", fieldErrors)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail)
+    }
+
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(ex: IllegalArgumentException): ResponseEntity<ProblemDetail> {
         val problemDetail =

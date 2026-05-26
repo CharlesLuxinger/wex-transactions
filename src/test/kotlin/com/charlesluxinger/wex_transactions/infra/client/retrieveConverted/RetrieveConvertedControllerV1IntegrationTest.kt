@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import io.restassured.http.ContentType
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.hasItem
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -171,6 +172,23 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .body("title", equalTo("Conversion Unavailable"))
             .body("detail", equalTo("Exchange rate unavailable: USD → BRL"))
             .body("type", equalTo("about:blank"))
+    }
+
+    @Test
+    @DisplayName("Retrieve converted returns 400 when targetCurrency is blank")
+    fun `retrieve converted returns 400 when target currency is blank`() {
+        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=   ")
+            .then()
+            .statusCode(400)
+            .body("title", equalTo("Bad Request"))
+            .body("detail", equalTo("Target currency must not be blank"))
+            .body("errors.field", hasItem("retrieveConverted.targetCurrency"))
+            .body("errors.message", hasItem("Target currency must not be blank"))
     }
 
     @Test
