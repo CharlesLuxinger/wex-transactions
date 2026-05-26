@@ -393,8 +393,8 @@ class RetrieveConvertedControllerV1IntegrationTest :
         targetCurrency: String,
         transactionDate: String,
         amount: BigDecimal = BigDecimal("100.00"),
-    ): Long {
-        return givenJson()
+    ): Long =
+        givenJson()
             .header(IDEMPOTENCY_KEY_HEADER_NAME, randomUUID().toString())
             .body(
                 mapOf(
@@ -411,7 +411,6 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .extract()
             .path<Int>("id")
             .toLong()
-    }
 
     private fun stubDefaultTreasuryRate(rate: String) {
         server.stubFor(

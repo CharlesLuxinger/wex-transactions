@@ -82,7 +82,7 @@ class PurchaseRepositoryJPAAdapterTest {
 
         `when`(springDataRepository.save(any<PurchaseJpaEntity>())).thenReturn(savedEntity)
 
-        val result = adapter.saveWithIdempotencyKey(purchase, idempotencyKey)
+        val result = adapter.save(purchase, idempotencyKey)
 
         assertThat(result.id).isEqualTo(1L)
         assertThat(result.description).isEqualTo("Test purchase")

@@ -26,7 +26,7 @@ class PurchaseRepositoryJPAAdapter(
             ?.toDomain()
 
     @Transactional
-    override fun saveWithIdempotencyKey(
+    override fun save(
         purchase: Purchase,
         key: IdempotencyKey,
     ): Purchase =

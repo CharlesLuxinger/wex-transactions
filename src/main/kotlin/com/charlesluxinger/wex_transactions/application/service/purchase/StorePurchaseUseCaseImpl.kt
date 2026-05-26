@@ -39,10 +39,9 @@ class StorePurchaseUseCaseImpl(
                 createdAt = Instant.now(),
             )
 
-        val saved = purchaseRepositoryPort.saveWithIdempotencyKey(purchase, idempotencyKey)
-        idempotencyKeyPort.store(idempotencyKey, saved.id)
-
-        return saved
+        return purchaseRepositoryPort
+            .save(purchase, idempotencyKey)
+            .also { idempotencyKeyPort.save(idempotencyKey, it.id) }
     }
 
     companion object {

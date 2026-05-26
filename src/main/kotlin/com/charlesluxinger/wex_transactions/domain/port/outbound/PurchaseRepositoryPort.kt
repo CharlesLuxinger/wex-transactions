@@ -8,7 +8,7 @@ interface PurchaseRepositoryPort {
 
     fun findByIdempotencyKey(key: IdempotencyKey): Purchase?
 
-    fun saveWithIdempotencyKey(
+    fun save(
         purchase: Purchase,
         key: IdempotencyKey,
     ): Purchase

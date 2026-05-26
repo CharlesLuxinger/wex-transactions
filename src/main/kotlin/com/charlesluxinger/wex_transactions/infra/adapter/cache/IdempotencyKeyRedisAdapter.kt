@@ -20,7 +20,7 @@ class IdempotencyKeyRedisAdapter(
         private val logger = LoggerFactory.getLogger(IdempotencyKeyRedisAdapter::class.java)
     }
 
-    override fun store(
+    override fun save(
         key: IdempotencyKey,
         purchaseId: Long,
     ) {

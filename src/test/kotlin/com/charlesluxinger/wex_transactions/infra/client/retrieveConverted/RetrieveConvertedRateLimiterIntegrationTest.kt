@@ -56,8 +56,8 @@ class RetrieveConvertedRateLimiterIntegrationTest :
             .body("title", equalTo("Conversion Unavailable"))
     }
 
-    private fun createPurchase(transactionDate: String): Long {
-        return givenJson()
+    private fun createPurchase(transactionDate: String): Long =
+        givenJson()
             .header(IDEMPOTENCY_KEY_HEADER_NAME, UUID.randomUUID().toString())
             .body(
                 mapOf(
@@ -74,7 +74,6 @@ class RetrieveConvertedRateLimiterIntegrationTest :
             .extract()
             .path<Int>("id")
             .toLong()
-    }
 
     private fun clearPairCache() {
         val pairPrefix =

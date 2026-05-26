@@ -121,4 +121,3 @@ class StorePurchaseCommandTest {
         assertEquals("Only United-States-Dollar purchases are supported", exception.message)
     }
 }
-

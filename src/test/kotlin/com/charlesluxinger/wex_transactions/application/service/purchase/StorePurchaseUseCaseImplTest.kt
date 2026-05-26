@@ -25,7 +25,6 @@ class StorePurchaseUseCaseImplTest {
     @Mock
     private lateinit var idempotencyKeyPort: IdempotencyKeyPort
 
-
     @Test
     @DisplayName("Stores purchase successfully with rounded amount and converted amount")
     fun `stores purchase successfully with rounded values`() {
@@ -40,7 +39,7 @@ class StorePurchaseUseCaseImplTest {
 
                 override fun findByIdempotencyKey(key: IdempotencyKey): Purchase? = null
 
-                override fun saveWithIdempotencyKey(
+                override fun save(
                     purchase: Purchase,
                     key: IdempotencyKey,
                 ): Purchase {
@@ -52,7 +51,7 @@ class StorePurchaseUseCaseImplTest {
 
         val fakeIdempotencyKeyPort =
             object : IdempotencyKeyPort {
-                override fun store(
+                override fun save(
                     key: IdempotencyKey,
                     purchaseId: Long,
                 ) {
@@ -101,7 +100,7 @@ class StorePurchaseUseCaseImplTest {
 
                 override fun findByIdempotencyKey(key: IdempotencyKey): Purchase? = null
 
-                override fun saveWithIdempotencyKey(
+                override fun save(
                     purchase: Purchase,
                     key: IdempotencyKey,
                 ): Purchase = throw AssertionError("Should not call save when cache hit")
@@ -109,12 +108,10 @@ class StorePurchaseUseCaseImplTest {
 
         val fakeIdempotencyKeyPort =
             object : IdempotencyKeyPort {
-                override fun store(
+                override fun save(
                     key: IdempotencyKey,
                     purchaseId: Long,
-                ) {
-                    throw AssertionError("Should not call store when cache hit")
-                }
+                ): Unit = throw AssertionError("Should not call store when cache hit")
 
                 override fun findByKey(key: IdempotencyKey): Long? = cachedPurchaseId
             }
@@ -146,7 +143,7 @@ class StorePurchaseUseCaseImplTest {
 
                 override fun findByIdempotencyKey(key: IdempotencyKey): Purchase? = null
 
-                override fun saveWithIdempotencyKey(
+                override fun save(
                     purchase: Purchase,
                     key: IdempotencyKey,
                 ): Purchase = throw AssertionError("Should not reach save")
@@ -154,12 +151,10 @@ class StorePurchaseUseCaseImplTest {
 
         val fakeIdempotencyKeyPort =
             object : IdempotencyKeyPort {
-                override fun store(
+                override fun save(
                     key: IdempotencyKey,
                     purchaseId: Long,
-                ) {
-                    throw AssertionError("Should not reach store")
-                }
+                ): Unit = throw AssertionError("Should not reach store")
 
                 override fun findByKey(key: IdempotencyKey): Long? = invalidPurchaseId
             }
@@ -194,7 +189,7 @@ class StorePurchaseUseCaseImplTest {
 
                 override fun findByIdempotencyKey(key: IdempotencyKey): Purchase? = null
 
-                override fun saveWithIdempotencyKey(
+                override fun save(
                     purchase: Purchase,
                     key: IdempotencyKey,
                 ): Purchase {
@@ -213,7 +208,7 @@ class StorePurchaseUseCaseImplTest {
 
         val fakeIdempotencyKeyPort =
             object : IdempotencyKeyPort {
-                override fun store(
+                override fun save(
                     key: IdempotencyKey,
                     purchaseId: Long,
                 ) {
@@ -253,7 +248,7 @@ class StorePurchaseUseCaseImplTest {
 
                 override fun findByIdempotencyKey(key: IdempotencyKey): Purchase? = null
 
-                override fun saveWithIdempotencyKey(
+                override fun save(
                     purchase: Purchase,
                     key: IdempotencyKey,
                 ): Purchase {
@@ -264,7 +259,7 @@ class StorePurchaseUseCaseImplTest {
 
         val fakeIdempotencyKeyPort =
             object : IdempotencyKeyPort {
-                override fun store(
+                override fun save(
                     key: IdempotencyKey,
                     purchaseId: Long,
                 ) {
