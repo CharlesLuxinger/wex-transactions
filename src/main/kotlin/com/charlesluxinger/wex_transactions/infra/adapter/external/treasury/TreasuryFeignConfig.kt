@@ -1,10 +1,14 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.external.treasury
 
 import feign.FeignException
+import feign.RequestInterceptor
+import feign.RequestTemplate
 import feign.RetryableException
 import feign.Retryer
 import feign.codec.ErrorDecoder
+import org.slf4j.MDC
 import org.springframework.context.annotation.Bean
+import java.util.UUID
 import kotlin.math.pow
 import kotlin.math.roundToLong
 
@@ -33,6 +37,13 @@ class TreasuryFeignConfig {
             }
         }
 
+    @Bean
+    fun treasuryTraceIdInterceptor(): RequestInterceptor =
+        RequestInterceptor { template: RequestTemplate ->
+            val traceId = MDC.get(TRACE_ID_HEADER) ?: UUID.randomUUID().toString()
+            template.header(TRACE_ID_HEADER, traceId)
+        }
+
     companion object {
         private const val INITIAL_BACKOFF_MS = 500L
         private const val MAX_BACKOFF_MS = 2_000L
@@ -40,6 +51,7 @@ class TreasuryFeignConfig {
         private const val TOO_MANY_REQUESTS = 429
         private const val SERVICE_UNAVAILABLE = 503
         private const val GATEWAY_TIMEOUT = 504
+        private const val TRACE_ID_HEADER = "X-Trace-Id"
     }
 }
 

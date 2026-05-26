@@ -47,12 +47,14 @@ resilience4j:
     instances:
       treasury-rates:
         sliding-window-size: 10
-        failure-rate-threshold: 50
+        failure-rate-threshold: 70
         wait-duration-in-open-state: 30s
+        minimum-number-of-calls: 5
   bulkhead:
     instances:
       treasury-rates:
         max-concurrent-calls: 5
+        max-wait-duration: 500ms
   ratelimiter:
     instances:
       api-purchases:

@@ -53,7 +53,7 @@ class GlobalExceptionHandler {
                     "message" to it.message,
                 )
             }
-        val firstMessage = fieldErrors.firstOrNull()?.get("message")?.toString() ?: "Validation failed"
+        val firstMessage = fieldErrors.firstOrNull()?.get("message") ?: "Validation failed"
         val problemDetail =
             ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST,
@@ -127,7 +127,7 @@ class GlobalExceptionHandler {
     fun handleMethodArgumentTypeMismatchException(
         ex: MethodArgumentTypeMismatchException,
     ): ResponseEntity<ProblemDetail> {
-        val parameterName = ex.name ?: "parameter"
+        val parameterName = ex.name
         val problemDetail =
             ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST,
@@ -262,7 +262,7 @@ class GlobalExceptionHandler {
         val problemDetail =
             ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
-                ex.message ?: "Idempotency key conflict detected",
+                ex.message,
             )
         problemDetail.title = "Conflict"
         problemDetail.type = URI.create("about:blank")
