@@ -75,14 +75,14 @@ class RedisExchangeRateCacheAdapter(
         return runCatching {
             val keys = stringRedisTemplate.keys("$pairPrefix*").sortedDescending()
 
-            keys
-                .asSequence()
-                .mapNotNull { key ->
-                    stringRedisTemplate
-                        .opsForValue()
-                        .get(key)
-                        ?.let { value -> objectMapper.readValue(value, ExchangeRateCacheValue::class.java).toDomain() }
-                }.firstOrNull()
+            keys.firstNotNullOfOrNull { key ->
+                stringRedisTemplate
+                    .opsForValue()
+                    .get(key)
+                    ?.let { value ->
+                        objectMapper.readValue(value, ExchangeRateCacheValue::class.java).toDomain()
+                    }
+            }
         }.onFailure { exception ->
             logger.warn(
                 "Failed to read latest exchange rate from cache for keyPrefix={} due to {}",

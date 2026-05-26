@@ -71,9 +71,7 @@ class RetrieveConvertedUseCaseImpl(
                     sourceCurrency = sourceCurrency,
                     targetCurrency = targetCurrency,
                     rateDate = rateDate,
-                )?.also { freshRate ->
-                    publishToCache(freshRate, purchase)
-                }
+                )?.also { publishToCache(it, purchase) }
         } catch (exception: Exception) {
             val latestCachedRate =
                 exchangeRateCachePort.getLatestRate(

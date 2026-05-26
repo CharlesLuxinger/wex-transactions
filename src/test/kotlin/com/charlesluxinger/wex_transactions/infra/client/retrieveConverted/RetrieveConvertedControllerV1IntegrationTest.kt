@@ -75,7 +75,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .body("convertedAmount", equalTo(510.00f))
             .body("targetCurrency", equalTo("BRL"))
 
-        val cached = awaitCache("exchangeRate:USD:BRL")
+        val cached = awaitCache("exchangeRate:USD:Brazil-Real:2026-01-16")
         assertThat(cached).isNotBlank()
     }
 
@@ -102,7 +102,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .statusCode(200)
             .body("exchangeRateUsed", equalTo(5.10f))
 
-        awaitCache("exchangeRate:USD:BRL")
+        awaitCache("exchangeRate:USD:Brazil-Real:2026-01-16")
 
         val treasuryCallsForDate =
             server.findAll(
@@ -119,7 +119,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
         stubTreasuryRateForDate("2026-01-16", "5.20")
 
         val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
-        redisTemplate.opsForValue().set("exchangeRate:USD:BRL", "{invalid-json")
+        redisTemplate.opsForValue().set("exchangeRate:USD:Brazil-Real:2026-01-16", "{invalid-json")
 
         givenJson()
             .accept(ContentType.JSON)
@@ -136,7 +136,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             )
         assertThat(treasuryCallsForDate).hasSize(1)
 
-        val cached = awaitCache("exchangeRate:USD:BRL")
+        val cached = awaitCache("exchangeRate:USD:Brazil-Real:2026-01-16")
         val cacheValue = objectMapper.readTree(cached)
         assertThat(cacheValue.path("rate").asText()).isEqualTo("5.20")
     }
@@ -170,7 +170,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .statusCode(422)
             .body("status", equalTo(422))
             .body("title", equalTo("Conversion Unavailable"))
-            .body("detail", equalTo("Exchange rate unavailable: USD → BRL"))
+            .body("detail", equalTo("Exchange rate unavailable: USD → Brazil-Real"))
             .body("type", equalTo("about:blank"))
     }
 
@@ -184,11 +184,11 @@ class RetrieveConvertedControllerV1IntegrationTest :
             {
               "rate": "5.45",
               "sourceCurrency": "USD",
-              "targetCurrency": "BRL",
+              "targetCurrency": "Brazil-Real",
               "retrievedAt": "2026-01-15T12:00:00Z"
             }
             """.trimIndent()
-        redisTemplate.opsForValue().set("exchangeRate:USD:BRL:2026-01-10", staleCachedRate)
+        redisTemplate.opsForValue().set("exchangeRate:USD:Brazil-Real:2026-01-10", staleCachedRate)
 
         server.stubFor(
             get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
@@ -227,7 +227,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             {
               "rate": "5.20",
               "sourceCurrency": "USD",
-              "targetCurrency": "BRL",
+              "targetCurrency": "Brazil-Real",
               "retrievedAt": "2026-01-12T12:00:00Z"
             }
             """.trimIndent()
@@ -236,12 +236,12 @@ class RetrieveConvertedControllerV1IntegrationTest :
             {
               "rate": "5.60",
               "sourceCurrency": "USD",
-              "targetCurrency": "BRL",
+              "targetCurrency": "Brazil-Real",
               "retrievedAt": "2026-01-15T12:00:00Z"
             }
             """.trimIndent()
-        redisTemplate.opsForValue().set("exchangeRate:USD:BRL:2026-01-10", olderCache)
-        redisTemplate.opsForValue().set("exchangeRate:USD:BRL:2026-01-15", newerCache)
+        redisTemplate.opsForValue().set("exchangeRate:USD:Brazil-Real:2026-01-10", olderCache)
+        redisTemplate.opsForValue().set("exchangeRate:USD:Brazil-Real:2026-01-15", newerCache)
 
         server.stubFor(
             get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))

@@ -93,7 +93,7 @@ class RetrieveConvertedRateLimiterIntegrationTest :
                                   "record_date": "2026-01-16",
                                   "country": "Brazil",
                                   "currency": "Real",
-                                  "country_currency_desc": "BRL",
+                                   "country_currency_desc": "Brazil-Real",
                                   "exchange_rate": "$rate"
                                 }
                               ]
@@ -106,7 +106,7 @@ class RetrieveConvertedRateLimiterIntegrationTest :
 
     companion object {
         private val server = WireMockServer(0)
-        private const val CACHE_KEY = "exchangeRate:USD:BRL:2026-01-16"
+        private const val CACHE_KEY = "exchangeRate:USD:Brazil-Real:2026-01-16"
 
         @JvmStatic
         @BeforeAll

@@ -71,14 +71,14 @@ class RetrieveConvertedUseCaseImplTest {
     @Test
     fun `cache hit returns cached rate and skips treasury`() {
         val purchase = samplePurchase(1L)
-        val query = RetrieveConvertedQuery(purchaseId = 1L, targetCurrency = "BRL")
+        val query = RetrieveConvertedQuery(purchaseId = 1L, targetCurrency = "Brazil-Real")
         val cachedRate = sampleRate("5.10")
 
         `when`(purchaseRepositoryPort.findById(1L)).thenReturn(purchase)
         `when`(
             exchangeRateCachePort.getRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(cachedRate)
@@ -92,7 +92,7 @@ class RetrieveConvertedUseCaseImplTest {
             never(),
         ).fetchNearestPriorRate(
             TargetCurrency("USD"),
-            TargetCurrency("BRL"),
+            TargetCurrency("Brazil-Real"),
             purchase.transactionDate.value.toLocalDate(),
         )
     }
@@ -100,21 +100,21 @@ class RetrieveConvertedUseCaseImplTest {
     @Test
     fun `cache miss fetches treasury and publishes event`() {
         val purchase = samplePurchase(2L)
-        val query = RetrieveConvertedQuery(purchaseId = 2L, targetCurrency = "BRL")
+        val query = RetrieveConvertedQuery(purchaseId = 2L, targetCurrency = "Brazil-Real")
         val fetchedRate = sampleRate("5.25")
 
         `when`(purchaseRepositoryPort.findById(2L)).thenReturn(purchase)
         `when`(
             exchangeRateCachePort.getRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(null)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(fetchedRate)
@@ -126,7 +126,7 @@ class RetrieveConvertedUseCaseImplTest {
         verify(exchangeRateEventPort).publish(
             ExchangeRateFetchedEvent(
                 sourceCurrency = "USD",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
                 rate = BigDecimal("5.25"),
                 retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
                 rateDate = LocalDate.parse("2026-01-15"),
@@ -134,20 +134,20 @@ class RetrieveConvertedUseCaseImplTest {
         )
         verify(exchangeRateCachePort, never()).saveRate(
             TargetCurrency("USD"),
-            TargetCurrency("BRL"),
+            TargetCurrency("Brazil-Real"),
             purchase.transactionDate.value.toLocalDate(),
             fetchedRate,
         )
         verify(exchangeRateCachePort, never()).getLatestRate(
             TargetCurrency("USD"),
-            TargetCurrency("BRL"),
+            TargetCurrency("Brazil-Real"),
         )
     }
 
     @Test
     fun `treasury failure uses Fallback latest cached rate`() {
         val purchase = samplePurchase(6L)
-        val query = RetrieveConvertedQuery(purchaseId = 6L, targetCurrency = "BRL")
+        val query = RetrieveConvertedQuery(purchaseId = 6L, targetCurrency = "Brazil-Real")
         val treasuryFailure = RuntimeException("treasury timeout")
         val staleCachedRate = sampleRate("5.45")
 
@@ -155,24 +155,26 @@ class RetrieveConvertedUseCaseImplTest {
         `when`(
             exchangeRateCachePort.getRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(null)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenThrow(treasuryFailure)
-        `when`(exchangeRateCachePort.getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(staleCachedRate)
+        `when`(
+            exchangeRateCachePort.getLatestRate(TargetCurrency("USD"), TargetCurrency("Brazil-Real")),
+        ).thenReturn(staleCachedRate)
 
         val response = useCase.retrieveConverted(query)
 
         assertEquals(BigDecimal("5.45"), response.exchangeRateUsed)
         assertEquals(BigDecimal("545.00"), response.convertedAmount)
-        verify(exchangeRateCachePort).getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))
+        verify(exchangeRateCachePort).getLatestRate(TargetCurrency("USD"), TargetCurrency("Brazil-Real"))
         verifyNoInteractions(exchangeRateEventPort)
 
         val fallbackWarningLog =
@@ -187,25 +189,25 @@ class RetrieveConvertedUseCaseImplTest {
     @Test
     fun `treasury failure without cache rethrows original exception without Fallback`() {
         val purchase = samplePurchase(7L)
-        val query = RetrieveConvertedQuery(purchaseId = 7L, targetCurrency = "BRL")
+        val query = RetrieveConvertedQuery(purchaseId = 7L, targetCurrency = "Brazil-Real")
         val treasuryFailure = RuntimeException("treasury connection reset")
 
         `when`(purchaseRepositoryPort.findById(7L)).thenReturn(purchase)
         `when`(
             exchangeRateCachePort.getRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(null)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenThrow(treasuryFailure)
-        `when`(exchangeRateCachePort.getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(null)
+        `when`(exchangeRateCachePort.getLatestRate(TargetCurrency("USD"), TargetCurrency("Brazil-Real"))).thenReturn(null)
 
         val thrown =
             assertThrows(RuntimeException::class.java) {
@@ -213,34 +215,34 @@ class RetrieveConvertedUseCaseImplTest {
             }
 
         assertSame(treasuryFailure, thrown)
-        verify(exchangeRateCachePort).getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))
+        verify(exchangeRateCachePort).getLatestRate(TargetCurrency("USD"), TargetCurrency("Brazil-Real"))
     }
 
     @Test
     fun `publish failure does not block response and logs trace id plus error`() {
         val purchase = samplePurchase(4L)
-        val query = RetrieveConvertedQuery(purchaseId = 4L, targetCurrency = "BRL")
+        val query = RetrieveConvertedQuery(purchaseId = 4L, targetCurrency = "Brazil-Real")
         val fetchedRate = sampleRate("5.25")
 
         `when`(purchaseRepositoryPort.findById(4L)).thenReturn(purchase)
         `when`(
             exchangeRateCachePort.getRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(null)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(fetchedRate)
         val fetchedEvent =
             ExchangeRateFetchedEvent(
                 sourceCurrency = "USD",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
                 rate = BigDecimal("5.25"),
                 retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
                 rateDate = LocalDate.parse("2026-01-15"),
@@ -254,12 +256,12 @@ class RetrieveConvertedUseCaseImplTest {
         assertEquals(BigDecimal("525.00"), response.convertedAmount)
         verify(exchangeRateCachePort).getRate(
             TargetCurrency("USD"),
-            TargetCurrency("BRL"),
+            TargetCurrency("Brazil-Real"),
             purchase.transactionDate.value.toLocalDate(),
         )
         verify(exchangeRateClientPort).fetchNearestPriorRate(
             TargetCurrency("USD"),
-            TargetCurrency("BRL"),
+            TargetCurrency("Brazil-Real"),
             purchase.transactionDate.value.toLocalDate(),
         )
 
@@ -278,7 +280,7 @@ class RetrieveConvertedUseCaseImplTest {
         `when`(purchaseRepositoryPort.findById(999L)).thenReturn(null)
 
         assertThrows(PurchaseNotFoundException::class.java) {
-            useCase.retrieveConverted(RetrieveConvertedQuery(999L, "BRL"))
+            useCase.retrieveConverted(RetrieveConvertedQuery(999L, "Brazil-Real"))
         }
     }
 
@@ -290,20 +292,20 @@ class RetrieveConvertedUseCaseImplTest {
         `when`(
             exchangeRateCachePort.getRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(null)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
+                TargetCurrency("Brazil-Real"),
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenReturn(null)
 
         assertThrows(RateUnavailableException::class.java) {
-            useCase.retrieveConverted(RetrieveConvertedQuery(3L, "BRL"))
+            useCase.retrieveConverted(RetrieveConvertedQuery(3L, "Brazil-Real"))
         }
     }
 
@@ -314,7 +316,7 @@ class RetrieveConvertedUseCaseImplTest {
             transactionAmount = BigDecimal("100.00"),
             transactionCurrency = TargetCurrency("USD"),
             transactionDate = TransactionDate("2026-01-16T10:00:00Z"),
-            targetCurrency = TargetCurrency("BRL"),
+            targetCurrency = TargetCurrency("Brazil-Real"),
             exchangeRate = sampleRate("5.00"),
             convertedAmount = BigDecimal("500.00"),
             createdAt = Instant.parse("2026-01-16T10:00:00Z"),
@@ -324,21 +326,23 @@ class RetrieveConvertedUseCaseImplTest {
         ExchangeRate(
             rate = BigDecimal(rate),
             sourceCurrency = TargetCurrency("USD"),
-            targetCurrency = TargetCurrency("BRL"),
+            targetCurrency = TargetCurrency("Brazil-Real"),
             retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
         )
 
     @Test
     fun `cache lookup passes transaction rate date`() {
         val purchase = samplePurchase(5L)
-        val query = RetrieveConvertedQuery(purchaseId = 5L, targetCurrency = "BRL")
+        val query = RetrieveConvertedQuery(purchaseId = 5L, targetCurrency = "Brazil-Real")
         val rateDate = purchase.transactionDate.value.toLocalDate()
 
         `when`(purchaseRepositoryPort.findById(5L)).thenReturn(purchase)
-        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate)).thenReturn(sampleRate("5.10"))
+        `when`(
+            exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("Brazil-Real"), rateDate),
+        ).thenReturn(sampleRate("5.10"))
 
         useCase.retrieveConverted(query)
 
-        verify(exchangeRateCachePort).getRate(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate)
+        verify(exchangeRateCachePort).getRate(TargetCurrency("USD"), TargetCurrency("Brazil-Real"), rateDate)
     }
 }

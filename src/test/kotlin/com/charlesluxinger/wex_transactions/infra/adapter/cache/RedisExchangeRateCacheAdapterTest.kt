@@ -121,7 +121,7 @@ class RedisExchangeRateCacheAdapterTest {
             {"rate":"5.05","sourceCurrency":"USD","targetCurrency":"BRL","retrievedAt":"2026-01-15T12:00:00Z"}
             """.trimIndent()
 
-        `when`(stringRedisTemplate.keys("${prefix}*")).thenReturn(setOf(olderKey, newestKey))
+        `when`(stringRedisTemplate.keys("$prefix*")).thenReturn(setOf(olderKey, newestKey))
         `when`(stringRedisTemplate.opsForValue()).thenReturn(valueOperations)
         `when`(valueOperations.get(newestKey)).thenReturn(newestValue)
         `when`(valueOperations.get(olderKey)).thenReturn(olderValue)
@@ -134,7 +134,7 @@ class RedisExchangeRateCacheAdapterTest {
     @Test
     fun `getLatestRate returns null when pair has no keys`() {
         val prefix = ExchangeRateCacheKeyBuilder.buildPairPrefix(TargetCurrency("USD"), TargetCurrency("BRL"))
-        `when`(stringRedisTemplate.keys("${prefix}*")).thenReturn(emptySet())
+        `when`(stringRedisTemplate.keys("$prefix*")).thenReturn(emptySet())
 
         val result = adapter.getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))
 

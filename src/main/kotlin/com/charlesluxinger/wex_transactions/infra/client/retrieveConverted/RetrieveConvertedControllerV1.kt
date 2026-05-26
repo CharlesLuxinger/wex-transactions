@@ -26,11 +26,15 @@ class RetrieveConvertedControllerV1(
         @RequestParam
         @NotBlank(message = "Target currency must not be blank")
         targetCurrency: String,
-    ): RetrieveConvertedResponse =
-        retrieveConvertedQueryPort.retrieveConverted(
-            RetrieveConvertedQuery(
-                purchaseId = purchaseId,
-                targetCurrency = targetCurrency,
-            ),
-        )
+    ): RetrieveConvertedResponse {
+        val response =
+            retrieveConvertedQueryPort.retrieveConverted(
+                RetrieveConvertedQuery(
+                    purchaseId = purchaseId,
+                    targetCurrency = targetCurrency,
+                ),
+            )
+
+        return response.copy(targetCurrency = targetCurrency.uppercase())
+    }
 }
