@@ -175,6 +175,102 @@ class RetrieveConvertedControllerV1IntegrationTest :
     }
 
     @Test
+    @DisplayName("Retrieve converted returns latest cached rate when treasury fails")
+    fun `retrieve converted uses Fallback latest cached rate when treasury fails`() {
+        stubDefaultTreasuryRate("1.00")
+        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+        val staleCachedRate =
+            """
+            {
+              "rate": "5.45",
+              "sourceCurrency": "USD",
+              "targetCurrency": "BRL",
+              "retrievedAt": "2026-01-15T12:00:00Z"
+            }
+            """.trimIndent()
+        redisTemplate.opsForValue().set("exchangeRate:USD:BRL:2026-01-10", staleCachedRate)
+
+        server.stubFor(
+            get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                .atPriority(1)
+                .withQueryParam(
+                    "fields",
+                    wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
+                ).withQueryParam("sort", wireMockEqualTo("-record_date"))
+                .withQueryParam("filter", containing("record_date:lte:2026-01-16"))
+                .withQueryParam("page[size]", wireMockEqualTo("10000"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(429)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"error\":\"rate limit exceeded\"}"),
+                ),
+        )
+
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .then()
+            .statusCode(200)
+            .body("exchangeRateUsed", equalTo(5.45f))
+            .body("convertedAmount", equalTo(545.00f))
+    }
+
+    @Test
+    @DisplayName("Retrieve converted fallback uses latest cached key across dates")
+    fun `retrieve converted Fallback uses latest cached key ignoring date`() {
+        stubDefaultTreasuryRate("1.00")
+        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+        val olderCache =
+            """
+            {
+              "rate": "5.20",
+              "sourceCurrency": "USD",
+              "targetCurrency": "BRL",
+              "retrievedAt": "2026-01-12T12:00:00Z"
+            }
+            """.trimIndent()
+        val newerCache =
+            """
+            {
+              "rate": "5.60",
+              "sourceCurrency": "USD",
+              "targetCurrency": "BRL",
+              "retrievedAt": "2026-01-15T12:00:00Z"
+            }
+            """.trimIndent()
+        redisTemplate.opsForValue().set("exchangeRate:USD:BRL:2026-01-10", olderCache)
+        redisTemplate.opsForValue().set("exchangeRate:USD:BRL:2026-01-15", newerCache)
+
+        server.stubFor(
+            get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
+                .atPriority(1)
+                .withQueryParam(
+                    "fields",
+                    wireMockEqualTo("record_date,country,currency,country_currency_desc,exchange_rate"),
+                ).withQueryParam("sort", wireMockEqualTo("-record_date"))
+                .withQueryParam("filter", containing("record_date:lte:2026-01-16"))
+                .withQueryParam("page[size]", wireMockEqualTo("10000"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(500)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"error\":\"upstream down\"}"),
+                ),
+        )
+
+        givenJson()
+            .accept(ContentType.JSON)
+            .`when`()
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .then()
+            .statusCode(200)
+            .body("exchangeRateUsed", equalTo(5.60f))
+            .body("convertedAmount", equalTo(560.00f))
+    }
+
+    @Test
     @DisplayName("Retrieve converted returns 400 when targetCurrency is blank")
     fun `retrieve converted returns 400 when target currency is blank`() {
         val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")

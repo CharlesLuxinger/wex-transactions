@@ -17,6 +17,7 @@ import ch.qos.logback.core.read.ListAppender
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -24,6 +25,7 @@ import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -136,6 +138,82 @@ class RetrieveConvertedUseCaseImplTest {
             purchase.transactionDate.value.toLocalDate(),
             fetchedRate,
         )
+        verify(exchangeRateCachePort, never()).getLatestRate(
+            TargetCurrency("USD"),
+            TargetCurrency("BRL"),
+        )
+    }
+
+    @Test
+    fun `treasury failure uses Fallback latest cached rate`() {
+        val purchase = samplePurchase(6L)
+        val query = RetrieveConvertedQuery(purchaseId = 6L, targetCurrency = "BRL")
+        val treasuryFailure = RuntimeException("treasury timeout")
+        val staleCachedRate = sampleRate("5.45")
+
+        `when`(purchaseRepositoryPort.findById(6L)).thenReturn(purchase)
+        `when`(
+            exchangeRateCachePort.getRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(null)
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenThrow(treasuryFailure)
+        `when`(exchangeRateCachePort.getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(staleCachedRate)
+
+        val response = useCase.retrieveConverted(query)
+
+        assertEquals(BigDecimal("5.45"), response.exchangeRateUsed)
+        assertEquals(BigDecimal("545.00"), response.convertedAmount)
+        verify(exchangeRateCachePort).getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))
+        verifyNoInteractions(exchangeRateEventPort)
+
+        val fallbackWarningLog =
+            listAppender.list.firstOrNull {
+                it.level == Level.WARN &&
+                    it.formattedMessage.contains("[USECASE][TREASURY_FETCH][FALLBACK_CACHE]") &&
+                    it.formattedMessage.contains("cachedRetrievedAt=${staleCachedRate.retrievedAt}")
+            }
+        kotlin.test.assertNotNull(fallbackWarningLog)
+    }
+
+    @Test
+    fun `treasury failure without cache rethrows original exception without Fallback`() {
+        val purchase = samplePurchase(7L)
+        val query = RetrieveConvertedQuery(purchaseId = 7L, targetCurrency = "BRL")
+        val treasuryFailure = RuntimeException("treasury connection reset")
+
+        `when`(purchaseRepositoryPort.findById(7L)).thenReturn(purchase)
+        `when`(
+            exchangeRateCachePort.getRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(null)
+        `when`(
+            exchangeRateClientPort.fetchNearestPriorRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenThrow(treasuryFailure)
+        `when`(exchangeRateCachePort.getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(null)
+
+        val thrown =
+            assertThrows(RuntimeException::class.java) {
+                useCase.retrieveConverted(query)
+            }
+
+        assertSame(treasuryFailure, thrown)
+        verify(exchangeRateCachePort).getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))
     }
 
     @Test

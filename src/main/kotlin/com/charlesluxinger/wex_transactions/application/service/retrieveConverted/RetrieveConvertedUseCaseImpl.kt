@@ -37,8 +37,7 @@ class RetrieveConvertedUseCaseImpl(
         val rateDate = purchase.transactionDate.value.toLocalDate()
         val rate =
             exchangeRateCachePort.getRate(sourceCurrency, targetCurrency, rateDate)
-                ?: fetchClient(sourceCurrency, targetCurrency, rateDate)
-                    ?.also { publishToCache(it, purchase) }
+                ?: fetchFromClientOrFallback(sourceCurrency, targetCurrency, rateDate, purchase)
 
         rate ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
 
@@ -59,16 +58,44 @@ class RetrieveConvertedUseCaseImpl(
         )
     }
 
-    private fun fetchClient(
+    @Suppress("TooGenericExceptionCaught")
+    private fun fetchFromClientOrFallback(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
+        purchase: Purchase,
     ): ExchangeRate? =
-        exchangeRateClientPort.fetchNearestPriorRate(
-            sourceCurrency = sourceCurrency,
-            targetCurrency = targetCurrency,
-            rateDate = rateDate,
-        )
+        try {
+            exchangeRateClientPort
+                .fetchNearestPriorRate(
+                    sourceCurrency = sourceCurrency,
+                    targetCurrency = targetCurrency,
+                    rateDate = rateDate,
+                )?.also { freshRate ->
+                    publishToCache(freshRate, purchase)
+                }
+        } catch (exception: Exception) {
+            val latestCachedRate =
+                exchangeRateCachePort.getLatestRate(
+                    sourceCurrency = sourceCurrency,
+                    targetCurrency = targetCurrency,
+                )
+
+            if (latestCachedRate != null) {
+                logger.warn(
+                    "[USECASE][TREASURY_FETCH][FALLBACK_CACHE] sourceCurrency={} targetCurrency={} " +
+                        "cachedRetrievedAt={} message={}",
+                    sourceCurrency.code,
+                    targetCurrency.code,
+                    latestCachedRate.retrievedAt,
+                    exception.message,
+                    exception,
+                )
+                latestCachedRate
+            } else {
+                throw exception
+            }
+        }
 
     @Suppress("TooGenericExceptionCaught")
     private fun publishToCache(
