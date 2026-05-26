@@ -17,10 +17,13 @@ data class RetrieveConvertedResponse(
     val transactionDate: String,
     @field:NotNull(message = "Original United-States-Dollar amount must not be null")
     @field:DecimalMin(value = "0.0", inclusive = false, message = "Original amount must be positive")
-    val originalUsdAmount: BigDecimal,
+    val transactionAmount: BigDecimal,
+    @field:NotBlank(message = "Transaction Currency must not be blank")
+    @field:Size(max = 50, message = "Transaction Currency must have at most 50 characters")
+    val transactionCurrency: String,
     @field:NotNull(message = "Exchange rate used must not be null")
     @field:DecimalMin(value = "0.0", inclusive = false, message = "Exchange rate must be positive")
-    val exchangeRateUsed: BigDecimal,
+    val exchangeRate: BigDecimal,
     @field:NotNull(message = "Converted amount must not be null")
     @field:DecimalMin(value = "0.0", inclusive = false, message = "Converted amount must be positive")
     val convertedAmount: BigDecimal,

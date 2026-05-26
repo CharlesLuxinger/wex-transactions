@@ -8,10 +8,10 @@ object ExchangeRateCacheKeyBuilder {
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
-    ): String = "exchangeRate:${sourceCurrency.code}:${targetCurrency.code}:$rateDate"
+    ): String = "exchangeRate:${sourceCurrency.value}:${targetCurrency.value}:$rateDate"
 
     fun buildPairPrefix(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
-    ): String = "exchangeRate:${sourceCurrency.code}:${targetCurrency.code}:"
+    ): String = "exchangeRate:${sourceCurrency.value}:${targetCurrency.value}:"
 }

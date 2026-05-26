@@ -1,12 +1,10 @@
 package com.charlesluxinger.wex_transactions.application.service.purchase
 
-import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyException
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
 import com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model.StorePurchaseCommand
-import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -14,13 +12,9 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
-import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import java.math.BigDecimal
-import java.time.Instant
 
 @ExtendWith(MockitoExtension::class)
 class StorePurchaseUseCaseImplTest {
@@ -50,14 +44,13 @@ class StorePurchaseUseCaseImplTest {
                 transactionAmount = BigDecimal("10.005"),
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-
             )
         val result = useCase.storePurchase(command)
 
         val savedPurchase = checkNotNull(persistedPurchase)
         assertEquals("New TV", savedPurchase.description)
         assertEquals(BigDecimal("10.01"), savedPurchase.transactionAmount)
-        assertEquals("United-States-Dollar", savedPurchase.transactionCurrency.code)
+        assertEquals("United-States-Dollar", savedPurchase.transactionCurrency.value)
         assertEquals(TransactionDate("2026-05-23T12:00:00Z"), savedPurchase.transactionDate)
     }
 

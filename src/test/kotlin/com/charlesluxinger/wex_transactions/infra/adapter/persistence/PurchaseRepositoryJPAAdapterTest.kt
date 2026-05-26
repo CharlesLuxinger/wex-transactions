@@ -1,6 +1,5 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.persistence
 
-import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate

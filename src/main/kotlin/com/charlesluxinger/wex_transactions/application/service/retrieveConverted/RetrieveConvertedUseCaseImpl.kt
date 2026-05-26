@@ -39,7 +39,7 @@ class RetrieveConvertedUseCaseImpl(
             exchangeRateCachePort.getRate(sourceCurrency, targetCurrency, rateDate)
                 ?: fetchFromClientOrFallback(sourceCurrency, targetCurrency, rateDate, purchase)
 
-        rate ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
+        rate ?: throw RateUnavailableException(sourceCurrency.value, targetCurrency.value)
 
         val convertedAmount =
             purchase.transactionAmount
@@ -50,10 +50,11 @@ class RetrieveConvertedUseCaseImpl(
             purchaseId = purchase.id,
             description = purchase.description,
             transactionDate = purchase.transactionDate.toCanonicalString(),
-            originalUsdAmount = purchase.transactionAmount,
-            exchangeRateUsed = rate.rate,
+            transactionAmount = purchase.transactionAmount,
+            transactionCurrency = purchase.transactionCurrency.value,
+            exchangeRate = rate.rate,
             convertedAmount = convertedAmount,
-            targetCurrency = targetCurrency.code,
+            targetCurrency = targetCurrency.value,
             createdAt = purchase.createdAt,
         )
     }
@@ -83,8 +84,8 @@ class RetrieveConvertedUseCaseImpl(
                 logger.warn(
                     "[USECASE][TREASURY_FETCH][FALLBACK_CACHE] sourceCurrency={} targetCurrency={} " +
                         "cachedRetrievedAt={} message={}",
-                    sourceCurrency.code,
-                    targetCurrency.code,
+                    sourceCurrency.value,
+                    targetCurrency.value,
                     latestCachedRate.retrievedAt,
                     exception.message,
                     exception,
@@ -103,8 +104,8 @@ class RetrieveConvertedUseCaseImpl(
         try {
             exchangeRateEventPort.publish(
                 ExchangeRateFetchedEvent(
-                    sourceCurrency = rate.sourceCurrency.code,
-                    targetCurrency = rate.targetCurrency.code,
+                    sourceCurrency = rate.sourceCurrency.value,
+                    targetCurrency = rate.targetCurrency.value,
                     rate = rate.rate,
                     retrievedAt = rate.retrievedAt,
                     rateDate = rate.retrievedAt.atOffset(ZoneOffset.UTC).toLocalDate(),
@@ -116,8 +117,8 @@ class RetrieveConvertedUseCaseImpl(
                     "traceId={} purchaseId={} sourceCurrency={} targetCurrency={} rateDate={} message={}",
                 MDC.get(TRACE_ID_KEY),
                 purchase.id,
-                rate.sourceCurrency.code,
-                rate.targetCurrency.code,
+                rate.sourceCurrency.value,
+                rate.targetCurrency.value,
                 rate.retrievedAt.atOffset(ZoneOffset.UTC).toLocalDate(),
                 ex.message,
                 ex,

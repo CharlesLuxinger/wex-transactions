@@ -2,6 +2,8 @@ package com.charlesluxinger.wex_transactions.infra.client.retrieveConverted
 
 import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTest
 import com.charlesluxinger.wex_transactions.config.RestAssuredRequestSupport
+import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
+import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCacheKeyBuilder
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
@@ -31,8 +33,6 @@ class RetrieveConvertedRateLimiterIntegrationTest :
         stubTreasuryRate("5.10")
         val purchaseId = createPurchase("2026-01-16T10:00:00Z")
 
-        Thread.sleep(1_100)
-
         repeat(10) {
             redisTemplate.delete(CACHE_KEY)
             givenJson()
@@ -41,10 +41,10 @@ class RetrieveConvertedRateLimiterIntegrationTest :
                 .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
                 .then()
                 .statusCode(200)
-                .body("exchangeRateUsed", equalTo(5.10f))
+                .body("exchangeRate", equalTo(5.10f))
         }
 
-        redisTemplate.delete(CACHE_KEY)
+        clearPairCache()
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
@@ -71,6 +71,18 @@ class RetrieveConvertedRateLimiterIntegrationTest :
             .extract()
             .path<Int>("id")
             .toLong()
+
+    private fun clearPairCache() {
+        val pairPrefix =
+            ExchangeRateCacheKeyBuilder.buildPairPrefix(
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+            )
+        val keys = redisTemplate.keys("$pairPrefix*")
+        if (keys.isNotEmpty()) {
+            redisTemplate.delete(keys)
+        }
+    }
 
     private fun stubTreasuryRate(rate: String) {
         server.stubFor(
@@ -127,7 +139,7 @@ class RetrieveConvertedRateLimiterIntegrationTest :
                 "${server.baseUrl()}/services/api/fiscal_service/v1/accounting/od"
             }
             registry.add("resilience4j.ratelimiter.instances.treasury-api.limit-for-period") { 10 }
-            registry.add("resilience4j.ratelimiter.instances.treasury-api.limit-refresh-period") { "1s" }
+            registry.add("resilience4j.ratelimiter.instances.treasury-api.limit-refresh-period") { "60s" }
             registry.add("resilience4j.ratelimiter.instances.treasury-api.timeout-duration") { "0" }
         }
     }

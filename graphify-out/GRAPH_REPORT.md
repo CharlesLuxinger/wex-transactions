@@ -1,11 +1,11 @@
 # Graph Report - C:\Users\charl\Projetos\wex-transactions  (2026-05-26)
 
 ## Corpus Check
-- 90 files · ~20,570 words
+- 90 files · ~20,477 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 586 nodes · 496 edges · 90 communities detected
+- 585 nodes · 495 edges · 90 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -102,16 +102,16 @@
 - [[_COMMUNITY_Community 89|Community 89]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `PurchaseTest` - 22 edges
-2. `BigDecimalExtensionsTest` - 21 edges
-3. `ExchangeRateTest` - 19 edges
-4. `TransactionDateTest` - 17 edges
-5. `ExchangeRateTreasuryAdapterTest` - 16 edges
-6. `TargetCurrencyTest` - 15 edges
-7. `RetrieveConvertedControllerV1IntegrationTest` - 15 edges
+1. `BigDecimalExtensionsTest` - 21 edges
+2. `ExchangeRateTest` - 19 edges
+3. `PurchaseTest` - 18 edges
+4. `ExchangeRateTreasuryAdapterTest` - 18 edges
+5. `TransactionDateTest` - 17 edges
+6. `RetrieveConvertedControllerV1IntegrationTest` - 17 edges
+7. `TargetCurrencyTest` - 15 edges
 8. `TreasuryRateRecordTest` - 14 edges
-9. `DomainExceptionTest` - 13 edges
-10. `GlobalExceptionHandler` - 12 edges
+9. `RetrieveConvertedUseCaseImplTest` - 13 edges
+10. `DomainExceptionTest` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
@@ -120,11 +120,11 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.09
-Nodes (1): PurchaseTest
+Nodes (1): BigDecimalExtensionsTest
 
 ### Community 1 - "Community 1"
-Cohesion: 0.09
-Nodes (1): BigDecimalExtensionsTest
+Cohesion: 0.1
+Nodes (1): RetrieveConvertedControllerV1IntegrationTest
 
 ### Community 2 - "Community 2"
 Cohesion: 0.1
@@ -132,15 +132,15 @@ Nodes (1): ExchangeRateTest
 
 ### Community 3 - "Community 3"
 Cohesion: 0.11
-Nodes (1): RetrieveConvertedControllerV1IntegrationTest
+Nodes (1): PurchaseTest
 
 ### Community 4 - "Community 4"
 Cohesion: 0.11
-Nodes (1): TransactionDateTest
+Nodes (1): ExchangeRateTreasuryAdapterTest
 
 ### Community 5 - "Community 5"
-Cohesion: 0.12
-Nodes (1): ExchangeRateTreasuryAdapterTest
+Cohesion: 0.11
+Nodes (1): TransactionDateTest
 
 ### Community 6 - "Community 6"
 Cohesion: 0.12
@@ -152,11 +152,11 @@ Nodes (1): TreasuryRateRecordTest
 
 ### Community 8 - "Community 8"
 Cohesion: 0.14
-Nodes (1): DomainExceptionTest
+Nodes (1): RetrieveConvertedUseCaseImplTest
 
 ### Community 9 - "Community 9"
 Cohesion: 0.14
-Nodes (1): PurchaseControllerV1Test
+Nodes (1): DomainExceptionTest
 
 ### Community 10 - "Community 10"
 Cohesion: 0.14
@@ -168,47 +168,47 @@ Nodes (1): GlobalExceptionHandler
 
 ### Community 12 - "Community 12"
 Cohesion: 0.15
-Nodes (1): GlobalExceptionHandlerTest
+Nodes (1): ExchangeRateTreasuryAdapterHttpIntegrationTest
 
 ### Community 13 - "Community 13"
-Cohesion: 0.17
-Nodes (1): StorePurchaseUseCaseImplTest
+Cohesion: 0.15
+Nodes (1): GlobalExceptionHandlerTest
 
 ### Community 14 - "Community 14"
-Cohesion: 0.17
-Nodes (1): RetrieveConvertedUseCaseImplTest
+Cohesion: 0.15
+Nodes (1): PurchaseControllerV1Test
 
 ### Community 15 - "Community 15"
 Cohesion: 0.17
-Nodes (1): ExchangeRateTreasuryAdapterHttpIntegrationTest
-
-### Community 16 - "Community 16"
-Cohesion: 0.17
 Nodes (1): PurchaseJpaEntityTest
 
-### Community 17 - "Community 17"
+### Community 16 - "Community 16"
 Cohesion: 0.18
 Nodes (1): ExchangeRateFetchedEventListenerTraceIdTest
 
-### Community 18 - "Community 18"
+### Community 17 - "Community 17"
 Cohesion: 0.18
 Nodes (1): TraceIdFilterTest
 
+### Community 18 - "Community 18"
+Cohesion: 0.2
+Nodes (1): ExchangeRateFetchedEventListenerTest
+
 ### Community 19 - "Community 19"
 Cohesion: 0.22
-Nodes (1): ExchangeRateFetchedEventListenerTest
+Nodes (1): StorePurchaseUseCaseImplTest
 
 ### Community 20 - "Community 20"
 Cohesion: 0.22
 Nodes (1): TreasuryFeignConfigTest
 
 ### Community 21 - "Community 21"
-Cohesion: 0.25
-Nodes (1): RedisExchangeRateCacheAdapterTest
+Cohesion: 0.22
+Nodes (1): RetrieveConvertedRateLimiterIntegrationTest
 
 ### Community 22 - "Community 22"
 Cohesion: 0.25
-Nodes (1): RetrieveConvertedRateLimiterIntegrationTest
+Nodes (1): RedisExchangeRateCacheAdapterTest
 
 ### Community 23 - "Community 23"
 Cohesion: 0.29
@@ -276,119 +276,119 @@ Nodes (1): RedisExchangeRateCacheAdapter
 
 ### Community 39 - "Community 39"
 Cohesion: 0.4
-Nodes (1): ExchangeRateTreasuryAdapter
+Nodes (1): DependencyDirectionTest
 
 ### Community 40 - "Community 40"
 Cohesion: 0.4
-Nodes (1): DependencyDirectionTest
+Nodes (1): UseCaseOwnershipTest
 
 ### Community 41 - "Community 41"
 Cohesion: 0.4
-Nodes (1): UseCaseOwnershipTest
+Nodes (1): WireMockConfig
 
 ### Community 42 - "Community 42"
 Cohesion: 0.4
-Nodes (1): WireMockConfig
+Nodes (1): RetrieveConvertedQueryValidationTest
 
 ### Community 43 - "Community 43"
 Cohesion: 0.4
-Nodes (1): RetrieveConvertedQueryValidationTest
+Nodes (1): ExchangeRateCacheKeyBuilderTest
 
 ### Community 44 - "Community 44"
 Cohesion: 0.4
-Nodes (1): ExchangeRateCacheKeyBuilderTest
+Nodes (1): JitterRetryerTest
 
 ### Community 45 - "Community 45"
 Cohesion: 0.4
-Nodes (1): JitterRetryerTest
+Nodes (1): TreasuryExchangeRateResponseTest
 
 ### Community 46 - "Community 46"
 Cohesion: 0.4
-Nodes (1): TreasuryExchangeRateResponseTest
-
-### Community 47 - "Community 47"
-Cohesion: 0.4
 Nodes (1): PurchaseRepositoryJPAAdapterTest
 
-### Community 48 - "Community 48"
+### Community 47 - "Community 47"
 Cohesion: 0.5
 Nodes (2): PersistenceConfig, PersistenceGuard
 
-### Community 49 - "Community 49"
+### Community 48 - "Community 48"
 Cohesion: 0.5
 Nodes (1): Purchase
 
-### Community 50 - "Community 50"
+### Community 49 - "Community 49"
 Cohesion: 0.5
 Nodes (1): ExchangeRateCacheKeyBuilder
 
-### Community 51 - "Community 51"
-Cohesion: 0.5
-Nodes (1): ExchangeRateClientPort
-
-### Community 52 - "Community 52"
+### Community 50 - "Community 50"
 Cohesion: 0.5
 Nodes (1): PurchaseRepositoryPort
 
-### Community 53 - "Community 53"
+### Community 51 - "Community 51"
 Cohesion: 0.5
 Nodes (1): ExchangeRateCacheValue
 
-### Community 54 - "Community 54"
+### Community 52 - "Community 52"
+Cohesion: 0.5
+Nodes (1): ExchangeRateTreasuryAdapter
+
+### Community 53 - "Community 53"
 Cohesion: 0.5
 Nodes (2): TreasuryExchangeRateResponse, TreasuryRateRecord
 
-### Community 55 - "Community 55"
+### Community 54 - "Community 54"
 Cohesion: 0.5
 Nodes (1): PurchaseJpaEntity
 
-### Community 56 - "Community 56"
+### Community 55 - "Community 55"
 Cohesion: 0.5
 Nodes (1): PurchaseRepositoryJPAAdapter
 
-### Community 57 - "Community 57"
+### Community 56 - "Community 56"
 Cohesion: 0.5
 Nodes (1): TestUseCaseImpl
 
-### Community 58 - "Community 58"
+### Community 57 - "Community 57"
 Cohesion: 0.5
 Nodes (1): ArchitectureTest
 
-### Community 59 - "Community 59"
+### Community 58 - "Community 58"
 Cohesion: 0.5
 Nodes (1): ControllerBoundaryTest
 
-### Community 60 - "Community 60"
+### Community 59 - "Community 59"
 Cohesion: 0.5
 Nodes (1): AbstractRestApiIntegrationTest
 
-### Community 61 - "Community 61"
+### Community 60 - "Community 60"
 Cohesion: 0.5
 Nodes (1): ContainersConfig
 
-### Community 62 - "Community 62"
+### Community 61 - "Community 61"
 Cohesion: 0.5
 Nodes (1): PersistenceConfigTest
 
-### Community 63 - "Community 63"
+### Community 62 - "Community 62"
 Cohesion: 0.5
 Nodes (1): PurchaseControllerV1IntegrationTest
 
-### Community 64 - "Community 64"
+### Community 63 - "Community 63"
 Cohesion: 0.67
 Nodes (1): Application
 
-### Community 65 - "Community 65"
+### Community 64 - "Community 64"
 Cohesion: 0.67
 Nodes (1): StorePurchaseUseCaseImpl
 
-### Community 66 - "Community 66"
+### Community 65 - "Community 65"
 Cohesion: 0.67
 Nodes (1): StorePurchaseCommandPort
 
-### Community 67 - "Community 67"
+### Community 66 - "Community 66"
 Cohesion: 0.67
 Nodes (1): RetrieveConvertedQueryPort
+
+### Community 67 - "Community 67"
+Cohesion: 0.67
+Nodes (1): ExchangeRateClientPort
 
 ### Community 68 - "Community 68"
 Cohesion: 0.67
@@ -518,7 +518,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.09 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.09 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.1 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
@@ -526,4 +526,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `Community 4` be split into smaller, more focused modules?**
   _Cohesion score 0.11 - nodes in this community are weakly interconnected._
 - **Should `Community 5` be split into smaller, more focused modules?**
-  _Cohesion score 0.12 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11 - nodes in this community are weakly interconnected._

@@ -76,6 +76,8 @@ class TreasuryApiRateLimiterTest : AbstractRestApiIntegrationTest() {
             registry.add("resilience4j.ratelimiter.instances.treasury-api.limit-for-period") { 10 }
             registry.add("resilience4j.ratelimiter.instances.treasury-api.limit-refresh-period") { "1s" }
             registry.add("resilience4j.ratelimiter.instances.treasury-api.timeout-duration") { "0" }
+            registry.add("resilience4j.circuitbreaker.instances.treasury-rates.failure-rate-threshold") { 100 }
+            registry.add("resilience4j.circuitbreaker.instances.treasury-rates.minimum-number-of-calls") { 100 }
             registry.add(
                 "treasury.api.base-url",
             ) { "http://127.0.0.1:65535/services/api/fiscal_service/v1/accounting/od" }

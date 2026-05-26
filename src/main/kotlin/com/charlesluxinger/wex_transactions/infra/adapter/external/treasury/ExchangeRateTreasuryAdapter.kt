@@ -54,7 +54,8 @@ class ExchangeRateTreasuryAdapter(
             }
     }
 
-    internal fun fallback(
+    @Suppress("unused")
+    fun fallback(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
@@ -62,8 +63,8 @@ class ExchangeRateTreasuryAdapter(
     ): ExchangeRate? {
         logger.error(
             "Treasury rate lookup failed for {} -> {} on {}",
-            sourceCurrency.code,
-            targetCurrency.code,
+            sourceCurrency.value,
+            targetCurrency.value,
             rateDate,
             throwable,
         )
@@ -77,14 +78,14 @@ class ExchangeRateTreasuryAdapter(
         if (latestCachedRate != null) {
             logger.warn(
                 "[ADAPTER][FALLBACK_CACHE] sourceCurrency={} targetCurrency={} cachedRetrievedAt={}",
-                sourceCurrency.code,
-                targetCurrency.code,
+                sourceCurrency.value,
+                targetCurrency.value,
                 latestCachedRate.retrievedAt,
             )
             return latestCachedRate
         }
 
-        throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
+        throw RateUnavailableException(sourceCurrency.value, targetCurrency.value)
     }
 
     companion object {

@@ -85,7 +85,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         val response = useCase.retrieveConverted(query)
 
-        assertEquals(BigDecimal("5.10"), response.exchangeRateUsed)
+        assertEquals(BigDecimal("5.10"), response.exchangeRate)
         assertEquals(BigDecimal("510.00"), response.convertedAmount)
         verify(
             exchangeRateClientPort,
@@ -121,7 +121,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         val response = useCase.retrieveConverted(query)
 
-        assertEquals(BigDecimal("5.25"), response.exchangeRateUsed)
+        assertEquals(BigDecimal("5.25"), response.exchangeRate)
         assertEquals(BigDecimal("525.00"), response.convertedAmount)
         verify(exchangeRateEventPort).publish(
             ExchangeRateFetchedEvent(
@@ -172,7 +172,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         val response = useCase.retrieveConverted(query)
 
-        assertEquals(BigDecimal("5.45"), response.exchangeRateUsed)
+        assertEquals(BigDecimal("5.45"), response.exchangeRate)
         assertEquals(BigDecimal("545.00"), response.convertedAmount)
         verify(
             exchangeRateCachePort,
@@ -258,7 +258,7 @@ class RetrieveConvertedUseCaseImplTest {
 
         val response = useCase.retrieveConverted(query)
 
-        assertEquals(BigDecimal("5.25"), response.exchangeRateUsed)
+        assertEquals(BigDecimal("5.25"), response.exchangeRate)
         assertEquals(BigDecimal("525.00"), response.convertedAmount)
         verify(exchangeRateCachePort).getRate(
             TargetCurrency("United-States-Dollar"),

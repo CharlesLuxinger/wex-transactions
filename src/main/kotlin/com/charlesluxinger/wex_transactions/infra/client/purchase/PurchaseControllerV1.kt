@@ -38,7 +38,7 @@ class PurchaseControllerV1(
             id = result.id,
             description = result.description,
             transactionAmount = result.transactionAmount,
-            transactionCurrency = result.transactionCurrency.code,
+            transactionCurrency = result.transactionCurrency.value,
             transactionDate = result.transactionDate.toCanonicalString(),
             createdAt = result.createdAt,
         )

@@ -98,7 +98,6 @@ curl -X POST http://localhost:8080/api/v1/purchases \
     "transactionAmount": 49.99,
     "transactionCurrency": "United-States-Dollar",
     "transactionDate": "2025-05-22T12:00:00",
-    "targetCurrency": "Brazil-Real"
   }'
 ```
 
@@ -110,9 +109,6 @@ Expected response (HTTP 201):
   "transactionAmount": 49.99,
   "transactionCurrency": "United-States-Dollar",
   "transactionDate": "2025-05-22T12:00:00Z",
-  "targetCurrency": "Brazil-Real",
-  "exchangeRate": 5.1234,
-  "convertedAmount": 256.07,
   "createdAt": "2025-05-22T10:30:00Z"
 }
 ```
@@ -128,7 +124,8 @@ Expected response (HTTP 200):
   "purchaseId": 1,
   "description": "Laptop charger",
   "transactionDate": "2025-05-22T12:00:00Z",
-  "originalUsdAmount": 49.99,
+  "transactionAmount": 49.99,
+  "transactionCurrency": "United-States-Dollar",
   "exchangeRateUsed": 0.92,
   "convertedAmount": 45.99,
   "targetCurrency": "Brazil-Real",

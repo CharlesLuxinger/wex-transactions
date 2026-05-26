@@ -77,8 +77,8 @@ class ExchangeRateTreasuryAdapterTest {
 
         assertThat(result).isNotNull
         assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("5.25"))
-        assertThat(result.sourceCurrency.code).isEqualTo("United-States-Dollar")
-        assertThat(result.targetCurrency.code).isEqualTo("Brazil-Real")
+        assertThat(result.sourceCurrency.value).isEqualTo("United-States-Dollar")
+        assertThat(result.targetCurrency.value).isEqualTo("Brazil-Real")
     }
 
     @Test
@@ -331,7 +331,7 @@ class ExchangeRateTreasuryAdapterTest {
         val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNotNull
-        assertThat(result!!.targetCurrency.code).isEqualTo("Brazil-Real")
+        assertThat(result!!.targetCurrency.value).isEqualTo("Brazil-Real")
     }
 
     @Test

@@ -15,14 +15,14 @@ class TargetCurrencyTest {
     fun `should create with treasury descriptor Canada-Dollar`() {
         val currency = TargetCurrency("Canada-Dollar")
 
-        assertEquals("Canada-Dollar", currency.code)
+        assertEquals("Canada-Dollar", currency.value)
     }
 
     @Test
     fun `should create with treasury descriptor Mexico-Peso`() {
         val currency = TargetCurrency("Mexico-Peso")
 
-        assertEquals("Mexico-Peso", currency.code)
+        assertEquals("Mexico-Peso", currency.value)
     }
 
     @Test
@@ -46,14 +46,14 @@ class TargetCurrencyTest {
     fun `should trim surrounding spaces`() {
         val currency = TargetCurrency("  Canada-Dollar  ")
 
-        assertEquals("Canada-Dollar", currency.code)
+        assertEquals("Canada-Dollar", currency.value)
     }
 
     @Test
     fun `should preserve original casing`() {
         val currency = TargetCurrency("canada-Dollar")
 
-        assertEquals("canada-Dollar", currency.code)
+        assertEquals("canada-Dollar", currency.value)
     }
 
     @Test
@@ -92,7 +92,7 @@ class TargetCurrencyTest {
         val accepted = listOf("Canada-Dollar", "Mexico-Peso", "Brazil-Real", "Japan-Yen")
 
         accepted.forEach { code ->
-            assertEquals(code, TargetCurrency(code).code)
+            assertEquals(code, TargetCurrency(code).value)
         }
     }
 

@@ -1,19 +1,19 @@
 package com.charlesluxinger.wex_transactions.domain.model
 
 class TargetCurrency(
-    code: String,
+    value: String,
 ) {
-    val code: String = code.trim()
+    val value: String = value.trim()
 
     init {
-        if (this.code.isBlank()) {
-            throw InvalidCurrencyException(this.code)
+        if (this.value.isBlank()) {
+            throw InvalidCurrencyException(this.value)
         }
     }
 
-    override fun equals(other: Any?): Boolean = this === other || (other is TargetCurrency && code == other.code)
+    override fun equals(other: Any?): Boolean = this === other || (other is TargetCurrency && value == other.value)
 
-    override fun hashCode(): Int = code.hashCode()
+    override fun hashCode(): Int = value.hashCode()
 
-    override fun toString(): String = code
+    override fun toString(): String = value
 }

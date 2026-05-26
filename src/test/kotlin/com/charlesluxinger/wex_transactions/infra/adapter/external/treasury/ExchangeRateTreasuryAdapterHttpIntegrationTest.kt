@@ -20,6 +20,8 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
+import org.junit.jupiter.api.AfterEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -32,6 +34,14 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
 
     @Autowired
     private lateinit var treasuryFeignClient: TreasuryFeignClient
+
+    @Autowired
+    private lateinit var circuitBreakerRegistry: CircuitBreakerRegistry
+
+    @AfterEach
+    fun resetCircuitBreaker() {
+        circuitBreakerRegistry.circuitBreaker("treasury-rates").reset()
+    }
 
     @Test
     @DisplayName("Adapter fetches treasury rate via real HTTP client")

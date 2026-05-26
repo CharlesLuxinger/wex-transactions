@@ -71,7 +71,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
-            .body("exchangeRateUsed", equalTo(5.10f))
+            .body("exchangeRate", equalTo(5.10f))
             .body("convertedAmount", equalTo(510.00f))
             .body("targetCurrency", equalTo("BRAZIL-REAL"))
 
@@ -100,7 +100,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
-            .body("exchangeRateUsed", equalTo(5.10f))
+            .body("exchangeRate", equalTo(5.10f))
 
         awaitCache("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-16")
 
@@ -127,7 +127,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
-            .body("exchangeRateUsed", equalTo(5.20f))
+            .body("exchangeRate", equalTo(5.20f))
 
         val treasuryCallsForDate =
             server.findAll(
@@ -213,7 +213,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
-            .body("exchangeRateUsed", equalTo(5.45f))
+            .body("exchangeRate", equalTo(5.45f))
             .body("convertedAmount", equalTo(545.00f))
     }
 
@@ -266,7 +266,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
-            .body("exchangeRateUsed", equalTo(5.60f))
+            .body("exchangeRate", equalTo(5.60f))
             .body("convertedAmount", equalTo(560.00f))
     }
 

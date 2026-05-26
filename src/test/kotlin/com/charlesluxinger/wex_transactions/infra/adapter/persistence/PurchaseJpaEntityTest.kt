@@ -1,6 +1,5 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.persistence
 
-import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
@@ -137,7 +136,7 @@ class PurchaseJpaEntityTest {
 
         assertEquals(originalDomain.description, jpaEntity.description)
         assertEquals(originalDomain.transactionAmount, jpaEntity.transactionAmount)
-        assertEquals(originalDomain.transactionCurrency.code, jpaEntity.transactionCurrency)
+        assertEquals(originalDomain.transactionCurrency.value, jpaEntity.transactionCurrency)
         assertEquals(
             originalDomain.transactionDate.value
                 .atOffset(ZoneOffset.UTC)
@@ -153,7 +152,7 @@ class PurchaseJpaEntityTest {
         assertEquals(originalDomain.id, convertedDomain.id)
         assertEquals(originalDomain.description, convertedDomain.description)
         assertEquals(originalDomain.transactionAmount, convertedDomain.transactionAmount)
-        assertEquals(originalDomain.transactionCurrency.code, convertedDomain.transactionCurrency.code)
+        assertEquals(originalDomain.transactionCurrency.value, convertedDomain.transactionCurrency.value)
         assertEquals(originalDomain.transactionDate.value, convertedDomain.transactionDate.value)
         assertEquals(originalDomain.createdAt, convertedDomain.createdAt)
     }
