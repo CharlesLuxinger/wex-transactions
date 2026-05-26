@@ -3,6 +3,9 @@ package com.charlesluxinger.wex_transactions.infra.adapter.external.treasury
 import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTest
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
+import com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.ExchangeRateTreasuryAdapter.Companion.FIELDS
+import com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.ExchangeRateTreasuryAdapter.Companion.PAGE_SIZE
+import com.charlesluxinger.wex_transactions.infra.adapter.external.treasury.ExchangeRateTreasuryAdapter.Companion.SORT
 import feign.FeignException
 import feign.RetryableException
 import okhttp3.mockwebserver.MockResponse
@@ -149,11 +152,8 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
 
     companion object {
         private val server = MockWebServer()
-        private val RETRYABLE_STATUSES = setOf(429, 503, 504)
-        private const val FIELDS = "record_date,country,currency,country_currency_desc,exchange_rate"
         private const val FILTER = "record_date:lte:2026-05-23,record_date:gte:2025-11-23"
-        private const val SORT = "-record_date"
-        private const val PAGE_SIZE = 10_000
+        private val RETRYABLE_STATUSES = setOf(429, 503, 504)
 
         @JvmStatic
         fun feignFailureMatrix(): Stream<Arguments> =

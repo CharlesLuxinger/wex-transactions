@@ -1,7 +1,6 @@
 package com.charlesluxinger.wex_transactions.domain.model
 
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.Instant
 
 class ExchangeRate(
@@ -10,7 +9,7 @@ class ExchangeRate(
     val targetCurrency: TargetCurrency,
     val retrievedAt: Instant,
 ) {
-    val rate: BigDecimal = rate.setScale(SCALE, RoundingMode.HALF_UP)
+    val rate: BigDecimal = rate.toMonetaryScale()
 
     init {
         require(this.rate > BigDecimal.ZERO) { "Exchange rate must be positive" }
@@ -30,7 +29,5 @@ class ExchangeRate(
 
     override fun toString(): String = "$sourceCurrency/$targetCurrency=$rate"
 
-    companion object {
-        private const val SCALE = 2
-    }
+    companion object
 }

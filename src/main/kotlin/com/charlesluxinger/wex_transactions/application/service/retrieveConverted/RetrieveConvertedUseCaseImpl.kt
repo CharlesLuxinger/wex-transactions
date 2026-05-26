@@ -4,6 +4,7 @@ import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
+import com.charlesluxinger.wex_transactions.domain.model.toMonetaryScale
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedResponse
@@ -16,7 +17,6 @@ import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseReposit
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.springframework.stereotype.Service
-import java.math.RoundingMode
 import java.time.LocalDate
 
 @Service
@@ -44,7 +44,7 @@ class RetrieveConvertedUseCaseImpl(
         val convertedAmount =
             purchase.transactionAmount
                 .multiply(rate.rate)
-                .setScale(CONVERSION_SCALE, RoundingMode.HALF_UP)
+                .toMonetaryScale()
 
         return RetrieveConvertedResponse(
             purchaseId = purchase.id,
@@ -101,7 +101,6 @@ class RetrieveConvertedUseCaseImpl(
 
     companion object {
         private val logger = LoggerFactory.getLogger(RetrieveConvertedUseCaseImpl::class.java)
-        private const val CONVERSION_SCALE = 2
         private const val TRACE_ID_KEY = "traceId"
     }
 }
