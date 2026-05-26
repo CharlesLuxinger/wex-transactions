@@ -64,6 +64,12 @@ The following tokens are fixed and must remain verbatim across synced specs/task
 - REQ-23: Controllers do not import repositories/adapters directly.
 - REQ-24: UseCase implementations live in `application/service/**`.
 - REQ-25: Domain stays framework-free (no Spring annotations).
+- REQ-26: Idempotency enforced via dual-layer strategy:
+  - Layer 1: Redis cache (90-day TTL, fast-path lookup by `X-Idempotency-Key` UUID)
+  - Layer 2: PostgreSQL `UNIQUE` constraint on `idempotency_key` column (atomic fallback)
+  - Clients required to submit `X-Idempotency-Key: {UUID}` header with POST requests
+  - Missing/invalid header returns `400 Bad Request`
+  - If Redis unavailable, system falls back to DB-only enforcement (still safe via UNIQUE constraint)
 
 ## Dependency Graph
 - F-A must exist before full F-B (retrieval depends on persisted purchase).
