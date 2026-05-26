@@ -87,9 +87,6 @@ Each section includes:
 
 **RESOLVED: Database-level currency validation**
 - Schema: `transaction_currency VARCHAR(50) NOT NULL`
-- Application-level validation enforces 3-character ISO-4217 format before persistence
-- Future improvement: Add database CHECK constraint `transaction_currency ~ '^[A-Z]{3}$'` for defense-in-depth
-- Rationale: Prevents invalid currency codes from entering system (e.g., via direct SQL inserts)
 
 ---
 
