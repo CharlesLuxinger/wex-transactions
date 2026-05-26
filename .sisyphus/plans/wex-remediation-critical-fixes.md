@@ -253,7 +253,7 @@ Evidence: `.sisyphus/evidence/task-{N}-{slug}.{ext}`
   - Generate key: `"exchangeRate:{sourceCurrency}:{targetCurrency}:{rateDate}"`
   - Verify all callers in `RedisExchangeRateCacheAdapter` pass `rateDate` (already updated in Task 0, verify correctness)
   - Add unit tests: same pair, different dates → different cache keys
-  - Verify cache key format with specific dates (e.g., `"exchangeRate:USD:Canada-Dollar:2024-01-15"`)
+  - Verify cache key format with specific dates (e.g., `"exchangeRate:United-States-Dollar:Canada-Dollar:2024-01-15"`)
 
   **Must NOT do**:
   - ❌ Keep old key format without date
@@ -275,7 +275,7 @@ Evidence: `.sisyphus/evidence/task-{N}-{slug}.{ext}`
 
   **Acceptance Criteria** (agent-executable only):
   - [ ] Key builder accepts `rateDate: LocalDate` parameter; verified: `rtk grep "buildCacheKey.*rateDate" src/main/kotlin/.../ExchangeRateCacheKeyBuilder.kt`
-  - [ ] Key format includes date: `exchangeRate:USD:Canada-Dollar:2024-01-15`; verified: unit test assertion
+  - [ ] Key format includes date: `exchangeRate:United-States-Dollar:Canada-Dollar:2024-01-15`; verified: unit test assertion
   - [ ] `getRate` and `saveRate` pass `rateDate` to key builder; verified: `rtk grep "buildCacheKey" src/main/kotlin/.../RedisExchangeRateCacheAdapter.kt` shows both calls include date
   - [ ] Same pair, different dates → different cache keys; unit test passes
   - [ ] Keys include full date (YYYY-MM-DD), not month/year; verified: test assertion on key format
@@ -284,8 +284,8 @@ Evidence: `.sisyphus/evidence/task-{N}-{slug}.{ext}`
   ```
   Scenario: Happy path — cache key includes date
     Tool: Interactive bash (unit test)
-    Steps: Call buildCacheKey(TargetCurrency("Canada-Dollar"), TargetCurrency("USD"), LocalDate.of(2024, 1, 15)).
-    Expected: Returns "exchangeRate:Canada-Dollar:USD:2024-01-15".
+    Steps: Call buildCacheKey(TargetCurrency("Canada-Dollar"), TargetCurrency("United-States-Dollar"), LocalDate.of(2024, 1, 15)).
+    Expected: Returns "exchangeRate:Canada-Dollar:United-States-Dollar:2024-01-15".
     Evidence: .sisyphus/evidence/task-1-cache-key.test-report.txt
 
   Scenario: Different dates produce different keys
@@ -344,7 +344,7 @@ Evidence: `.sisyphus/evidence/task-{N}-{slug}.{ext}`
   ```
   Scenario: Happy path — event triggers cache save
     Tool: Interactive bash (unit test)
-    Steps: Fire ExchangeRateFetchedEvent with sourceCurrency=Canada-Dollar, targetCurrency=USD, rate=1.25, rateDate=2024-01-15.
+    Steps: Fire ExchangeRateFetchedEvent with sourceCurrency=Canada-Dollar, targetCurrency=United-States-Dollar, rate=1.25, rateDate=2024-01-15.
     Expected: Mock ExchangeRateCachePort.saveRate called once with matching params (including rateDate).
     Evidence: .sisyphus/evidence/task-2-event-cache-save.test-report.txt
 

@@ -15,8 +15,8 @@ data class RetrieveConvertedResponse(
     val description: String,
     @field:NotBlank(message = "Transaction date must not be blank")
     val transactionDate: String,
-    @field:NotNull(message = "Original USD amount must not be null")
-    @field:DecimalMin(value = "0.0", inclusive = false, message = "Original USD amount must be positive")
+    @field:NotNull(message = "Original United-States-Dollar amount must not be null")
+    @field:DecimalMin(value = "0.0", inclusive = false, message = "Original amount must be positive")
     val originalUsdAmount: BigDecimal,
     @field:NotNull(message = "Exchange rate used must not be null")
     @field:DecimalMin(value = "0.0", inclusive = false, message = "Exchange rate must be positive")

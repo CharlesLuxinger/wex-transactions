@@ -1,14 +1,14 @@
 # WEX Challenge — Business Specification
 
 ## Purpose
-Define business requirements for storing purchase transactions in USD and retrieving converted values using Treasury reporting rates, translated to this project constraints.
+Define business requirements for storing purchase transactions in United-States-Dollar and retrieving converted values using Treasury reporting rates, translated to this project constraints.
 
 ## Business Scope
 ### In Scope
 - Store a purchase transaction with:
   - description
   - transaction date
-  - purchase amount (USD)
+  - purchase amount (United-States-Dollar)
 - Assign and persist a unique identifier for each stored purchase.
 - Retrieve a previously stored purchase converted to a target currency.
 - Use Treasury Reporting Rates of Exchange as the only currency source (treasury-only):
@@ -32,7 +32,7 @@ A purchase transaction must be accepted and persisted with a generated unique id
 - Transaction date:
   - Required.
   - Must be a valid date format.
-- Purchase amount (USD):
+- Purchase amount (United-States-Dollar):
   - Required.
   - Must be positive.
   - Must be rounded to nearest cent (2 decimal places).
@@ -56,7 +56,7 @@ The converted retrieval must include:
 - purchase identifier
 - description
 - transaction date
-- original USD amount
+- original United-States-Dollar amount
 - exchange rate used
 - converted amount in target currency
 

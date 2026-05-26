@@ -26,8 +26,8 @@ class RetrieveConvertedRateLimiterIntegrationTest :
     private lateinit var redisTemplate: StringRedisTemplate
 
     @Test
-    @DisplayName("retrieve converted returns 429 after treasury-api exceeds 10 calls")
-    fun `retrieve converted returns 429 when treasury rate limiter is exceeded`() {
+    @DisplayName("retrieve converted returns 422 after treasury-api exceeds 10 calls")
+    fun `retrieve converted returns 422 when treasury rate limiter is exceeded`() {
         stubTreasuryRate("5.10")
         val purchaseId = createPurchase("2026-01-16T10:00:00Z")
 
@@ -38,7 +38,7 @@ class RetrieveConvertedRateLimiterIntegrationTest :
             givenJson()
                 .accept(ContentType.JSON)
                 .`when`()
-                .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+                .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
                 .then()
                 .statusCode(200)
                 .body("exchangeRateUsed", equalTo(5.10f))
@@ -48,10 +48,10 @@ class RetrieveConvertedRateLimiterIntegrationTest :
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
-            .statusCode(429)
-            .body("title", equalTo("Too Many Requests"))
+            .statusCode(422)
+            .body("title", equalTo("Conversion Unavailable"))
     }
 
     private fun createPurchase(transactionDate: String): Long =
@@ -60,9 +60,9 @@ class RetrieveConvertedRateLimiterIntegrationTest :
                 mapOf(
                     "description" to "Rate limiter purchase",
                     "transactionAmount" to "100.00",
-                    "transactionCurrency" to "USD",
+                    "transactionCurrency" to "United-States-Dollar",
                     "transactionDate" to transactionDate,
-                    "targetCurrency" to "BRL",
+                    "targetCurrency" to "Brazil-Real",
                 ),
             ).`when`()
             .post("/api/v1/purchases")
@@ -106,7 +106,7 @@ class RetrieveConvertedRateLimiterIntegrationTest :
 
     companion object {
         private val server = WireMockServer(0)
-        private const val CACHE_KEY = "exchangeRate:USD:Brazil-Real:2026-01-16"
+        private const val CACHE_KEY = "exchangeRate:United-States-Dollar:Brazil-Real:2026-01-16"
 
         @JvmStatic
         @BeforeAll

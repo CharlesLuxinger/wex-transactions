@@ -64,7 +64,7 @@ describe('Order', () => {
       const order = createDraftOrder();
       const productId = ProductId.from('prod-123');
       const quantity = Quantity.create(2);
-      const price = Money.create(10.00, 'USD');
+      const price = Money.create(10.00, 'United-States-Dollar');
 
       order.addItem(productId, quantity, price);
 
@@ -76,7 +76,7 @@ describe('Order', () => {
     it('increases quantity for existing product', () => {
       const order = createDraftOrder();
       const productId = ProductId.from('prod-123');
-      const price = Money.create(10.00, 'USD');
+      const price = Money.create(10.00, 'United-States-Dollar');
 
       order.addItem(productId, Quantity.create(2), price);
       order.addItem(productId, Quantity.create(3), price);
@@ -89,7 +89,7 @@ describe('Order', () => {
       const order = createCancelledOrder();
 
       expect(() => {
-        order.addItem(ProductId.from('prod-123'), Quantity.create(1), Money.create(10, 'USD'));
+        order.addItem(ProductId.from('prod-123'), Quantity.create(1), Money.create(10, 'United-States-Dollar'));
       }).toThrow(InvalidOrderStateError);
     });
 
@@ -97,7 +97,7 @@ describe('Order', () => {
       const order = createDraftOrder();
 
       expect(() => {
-        order.addItem(ProductId.from('prod-123'), Quantity.create(0), Money.create(10, 'USD'));
+        order.addItem(ProductId.from('prod-123'), Quantity.create(0), Money.create(10, 'United-States-Dollar'));
       }).toThrow(InvalidQuantityError);
     });
   });
@@ -136,8 +136,8 @@ describe('Order', () => {
   describe('total', () => {
     it('calculates total from all items', () => {
       const order = createDraftOrder();
-      order.addItem(ProductId.from('p1'), Quantity.create(2), Money.create(10, 'USD'));
-      order.addItem(ProductId.from('p2'), Quantity.create(1), Money.create(25, 'USD'));
+      order.addItem(ProductId.from('p1'), Quantity.create(2), Money.create(10, 'United-States-Dollar'));
+      order.addItem(ProductId.from('p2'), Quantity.create(1), Money.create(25, 'United-States-Dollar'));
 
       expect(order.total.amount).toBe(45); // 2*10 + 1*25
     });
@@ -157,7 +157,7 @@ function createDraftOrder(): Order {
 
 function createOrderWithItems(): Order {
   const order = createDraftOrder();
-  order.addItem(ProductId.from('prod-123'), Quantity.create(1), Money.create(10, 'USD'));
+  order.addItem(ProductId.from('prod-123'), Quantity.create(1), Money.create(10, 'United-States-Dollar'));
   return order;
 }
 
@@ -182,30 +182,30 @@ function createCancelledOrder(): Order {
 describe('Money', () => {
   describe('create', () => {
     it('creates money with valid amount', () => {
-      const money = Money.create(10.50, 'USD');
+      const money = Money.create(10.50, 'United-States-Dollar');
 
       expect(money.amount).toBe(10.50);
-      expect(money.currency).toBe('USD');
+      expect(money.currency).toBe('United-States-Dollar');
     });
 
     it('throws for negative amount', () => {
-      expect(() => Money.create(-1, 'USD')).toThrow(InvalidMoneyError);
+      expect(() => Money.create(-1, 'United-States-Dollar')).toThrow(InvalidMoneyError);
     });
   });
 
   describe('add', () => {
     it('adds two money values with same currency', () => {
-      const a = Money.create(10, 'USD');
-      const b = Money.create(20, 'USD');
+      const a = Money.create(10, 'United-States-Dollar');
+      const b = Money.create(20, 'United-States-Dollar');
 
       const result = a.add(b);
 
       expect(result.amount).toBe(30);
-      expect(result.currency).toBe('USD');
+      expect(result.currency).toBe('United-States-Dollar');
     });
 
     it('throws for different currencies', () => {
-      const usd = Money.create(10, 'USD');
+      const usd = Money.create(10, 'United-States-Dollar');
       const eur = Money.create(10, 'EUR');
 
       expect(() => usd.add(eur)).toThrow(CurrencyMismatchError);
@@ -214,15 +214,15 @@ describe('Money', () => {
 
   describe('equality', () => {
     it('equals money with same amount and currency', () => {
-      const a = Money.create(10, 'USD');
-      const b = Money.create(10, 'USD');
+      const a = Money.create(10, 'United-States-Dollar');
+      const b = Money.create(10, 'United-States-Dollar');
 
       expect(a.equals(b)).toBe(true);
     });
 
     it('not equal with different amount', () => {
-      const a = Money.create(10, 'USD');
-      const b = Money.create(20, 'USD');
+      const a = Money.create(10, 'United-States-Dollar');
+      const b = Money.create(20, 'United-States-Dollar');
 
       expect(a.equals(b)).toBe(false);
     });
@@ -378,7 +378,7 @@ describe('PostgresOrderRepository', () => {
   describe('save and findById', () => {
     it('persists and retrieves order', async () => {
       const order = Order.create(CustomerId.from('cust-123'));
-      order.addItem(ProductId.from('prod-1'), Quantity.create(2), Money.create(10, 'USD'));
+      order.addItem(ProductId.from('prod-1'), Quantity.create(2), Money.create(10, 'United-States-Dollar'));
 
       await repository.save(order);
       const retrieved = await repository.findById(order.id);
@@ -391,10 +391,10 @@ describe('PostgresOrderRepository', () => {
 
     it('updates existing order', async () => {
       const order = Order.create(CustomerId.from('cust-123'));
-      order.addItem(ProductId.from('prod-1'), Quantity.create(1), Money.create(10, 'USD'));
+      order.addItem(ProductId.from('prod-1'), Quantity.create(1), Money.create(10, 'United-States-Dollar'));
       await repository.save(order);
 
-      order.addItem(ProductId.from('prod-2'), Quantity.create(3), Money.create(20, 'USD'));
+      order.addItem(ProductId.from('prod-2'), Quantity.create(3), Money.create(20, 'United-States-Dollar'));
       await repository.save(order);
 
       const retrieved = await repository.findById(order.id);
@@ -636,7 +636,7 @@ export class OrderBuilder {
     this.items.push({
       productId: ProductId.from(productId),
       quantity: Quantity.create(quantity),
-      price: Money.create(price, 'USD'),
+      price: Money.create(price, 'United-States-Dollar'),
     });
     return this;
   }

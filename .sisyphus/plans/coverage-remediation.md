@@ -231,8 +231,8 @@ Test-Path "src/test/kotlin/**/PortContractTest.kt"
 
   **What to do**: Add 3 test methods to `ExchangeRateTest.kt` covering the 3 missed branches in `ExchangeRate.equals()`:
   1. `should not equal different type` — compare ExchangeRate with a String: `assertNotEquals(sampleRate(), "not-a-rate")`
-  2. `should not equal when sourceCurrency differs` — same rate value, same targetCurrency, different sourceCurrency: `assertNotEquals(sampleRate(source = TargetCurrency("USD")), sampleRate(source = TargetCurrency("EUR")))`
-  3. `should not equal when targetCurrency differs` — same rate value, same sourceCurrency, different targetCurrency: `assertNotEquals(sampleRate(target = TargetCurrency("EUR")), sampleRate(target = TargetCurrency("JPY")))`
+  2. `should not equal when sourceCurrency differs` — same rate value, same targetCurrency, different sourceCurrency: `assertNotEquals(sampleRate(source = TargetCurrency("United-States-Dollar")), sampleRate(source = TargetCurrency("Brazil-Real")))`
+  3. `should not equal when targetCurrency differs` — same rate value, same sourceCurrency, different targetCurrency: `assertNotEquals(sampleRate(target = TargetCurrency("Brazil-Real")), sampleRate(target = TargetCurrency("JPY")))`
 
   Use existing `sampleRate()` helper for constructing instances.
 
@@ -316,7 +316,7 @@ Test-Path "src/test/kotlin/**/PortContractTest.kt"
 
 - [ ] 6. Add TargetCurrency equals different-type branch test
 
-  **What to do**: Add test to `TargetCurrencyTest.kt` covering the 1 missed branch in `TargetCurrency.equals()` where `other !is TargetCurrency`. The JaCoCo HTML shows "1 of 6 branches missed" at line 16. Add: `fun `should not equal different type`()` — `assertNotEquals(TargetCurrency("USD"), "not-a-currency")` and `assertNotEquals(TargetCurrency("USD"), null)`.
+  **What to do**: Add test to `TargetCurrencyTest.kt` covering the 1 missed branch in `TargetCurrency.equals()` where `other !is TargetCurrency`. The JaCoCo HTML shows "1 of 6 branches missed" at line 16. Add: `fun `should not equal different type`()` — `assertNotEquals(TargetCurrency("United-States-Dollar"), "not-a-currency")` and `assertNotEquals(TargetCurrency("United-States-Dollar"), null)`.
 
   **Must NOT do**: Do not modify TargetCurrency.kt.
 
@@ -338,13 +338,13 @@ Test-Path "src/test/kotlin/**/PortContractTest.kt"
   ```
   Scenario: Not equal to different type
     Tool: Bash
-    Steps: add assertNotEquals(TargetCurrency("USD"), "string"), run test
+    Steps: add assertNotEquals(TargetCurrency("United-States-Dollar"), "string"), run test
     Expected: test passes
     Evidence: .sisyphus/evidence/task-6-tc-different-type.txt
 
   Scenario: Not equal to null
     Tool: Bash
-    Steps: add assertNotEquals(TargetCurrency("USD"), null), run test
+    Steps: add assertNotEquals(TargetCurrency("United-States-Dollar"), null), run test
     Expected: test passes
     Evidence: .sisyphus/evidence/task-6-tc-null.txt
   ```

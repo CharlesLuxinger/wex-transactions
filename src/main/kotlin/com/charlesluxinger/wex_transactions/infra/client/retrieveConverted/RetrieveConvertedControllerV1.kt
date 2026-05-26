@@ -4,6 +4,7 @@ import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverte
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedResponse
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Positive
 import org.springframework.http.HttpStatus
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,7 +23,9 @@ class RetrieveConvertedControllerV1(
     @GetMapping("/{purchaseId}/converted")
     @ResponseStatus(HttpStatus.OK)
     fun retrieveConverted(
-        @PathVariable purchaseId: Long,
+        @PathVariable
+        @Positive
+        purchaseId: Long,
         @RequestParam
         @NotBlank(message = "Target currency must not be blank")
         targetCurrency: String,

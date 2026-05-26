@@ -27,7 +27,7 @@ class StorePurchaseUseCaseImpl(
         val centRoundedAmount = command.transactionAmount.toMonetaryScale()
 
         val sourceCurrency = TargetCurrency(command.transactionCurrency)
-        require(sourceCurrency.code == "USD") { "Only USD purchases are supported" }
+        require(sourceCurrency.code == "United-States-Dollar") { "Only United-States-Dollar purchases are supported" }
         val targetCurrency = TargetCurrency(command.targetCurrency)
         val transactionDate = TransactionDate(command.transactionDate)
 

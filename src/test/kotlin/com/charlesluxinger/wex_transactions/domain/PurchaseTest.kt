@@ -24,8 +24,8 @@ class PurchaseTest {
         assertEquals(1L, purchase.id)
         assertEquals("Fuel purchase", purchase.description)
         assertEquals(BigDecimal("100.00"), purchase.transactionAmount)
-        assertEquals(TargetCurrency("USD"), purchase.transactionCurrency)
-        assertEquals(TargetCurrency("BRL"), purchase.targetCurrency)
+        assertEquals(TargetCurrency("United-States-Dollar"), purchase.transactionCurrency)
+        assertEquals(TargetCurrency("Brazil-Real"), purchase.targetCurrency)
     }
 
     @Test
@@ -39,7 +39,7 @@ class PurchaseTest {
     @Test
     fun `should accept BigDecimal amounts`() {
         val amount = BigDecimal("1234567890.12")
-        val rate = ExchangeRate(BigDecimal("1.234567"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
+        val rate = ExchangeRate(BigDecimal("1.234567"), TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), Instant.now())
         val converted = amount.multiply(rate.rate).toMonetaryScale()
 
         val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
@@ -51,7 +51,7 @@ class PurchaseTest {
     @Test
     fun `should preserve TransactionDate and TargetCurrency as value objects`() {
         val date = TransactionDate(LocalDateTime.of(2026, 1, 2, 3, 4, 5))
-        val transactionCurrency = TargetCurrency("EUR")
+        val transactionCurrency = TargetCurrency("Brazil-Real")
         val targetCurrency = TargetCurrency("GBP")
 
         val purchase =
@@ -68,7 +68,7 @@ class PurchaseTest {
 
     @Test
     fun `should store exchangeRate and convertedAmount`() {
-        val rate = ExchangeRate(BigDecimal("5.432100"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
+        val rate = ExchangeRate(BigDecimal("5.432100"), TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), Instant.now())
         val converted = BigDecimal("543.21")
 
         val purchase = samplePurchase(exchangeRate = rate, convertedAmount = converted)
@@ -127,7 +127,7 @@ class PurchaseTest {
     @Test
     fun `convertedAmount should be calculable from rate and original amount`() {
         val amount = BigDecimal("10.00")
-        val rate = ExchangeRate(BigDecimal("5.250000"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
+        val rate = ExchangeRate(BigDecimal("5.250000"), TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), Instant.now())
         val converted = amount.multiply(rate.rate).toMonetaryScale()
 
         val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
@@ -148,7 +148,7 @@ class PurchaseTest {
     @Test
     fun `should handle very large amounts precision`() {
         val amount = BigDecimal("999999999999.99")
-        val rate = ExchangeRate(BigDecimal("9.999999"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
+        val rate = ExchangeRate(BigDecimal("9.999999"), TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), Instant.now())
         val converted = amount.multiply(rate.rate).toMonetaryScale()
 
         val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
@@ -212,14 +212,14 @@ class PurchaseTest {
         id: Long = 1L,
         description: String = "Fuel purchase",
         transactionAmount: BigDecimal = BigDecimal("100.00"),
-        transactionCurrency: TargetCurrency = TargetCurrency("USD"),
+        transactionCurrency: TargetCurrency = TargetCurrency("United-States-Dollar"),
         transactionDate: TransactionDate = TransactionDate(LocalDateTime.of(2026, 1, 1, 10, 30, 45)),
-        targetCurrency: TargetCurrency = TargetCurrency("BRL"),
+        targetCurrency: TargetCurrency = TargetCurrency("Brazil-Real"),
         exchangeRate: ExchangeRate =
             ExchangeRate(
                 rate = BigDecimal("5.000000"),
-                sourceCurrency = TargetCurrency("USD"),
-                targetCurrency = TargetCurrency("BRL"),
+                sourceCurrency = TargetCurrency("United-States-Dollar"),
+                targetCurrency = TargetCurrency("Brazil-Real"),
                 retrievedAt = Instant.parse("2026-01-01T10:00:00Z"),
             ),
         convertedAmount: BigDecimal = BigDecimal("500.00"),

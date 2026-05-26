@@ -23,7 +23,7 @@ class ExchangeRateTreasuryAdapterTest {
 
     private lateinit var adapter: ExchangeRateTreasuryAdapter
 
-    private val usd = TargetCurrency("USD")
+    private val usd = TargetCurrency("United-States-Dollar")
     private val brazilReal = TargetCurrency("Brazil-Real")
     private val rateDate = LocalDate.parse("2026-05-23")
     private val minBoundary = rateDate.minusMonths(6)
@@ -71,7 +71,7 @@ class ExchangeRateTreasuryAdapterTest {
 
         assertThat(result).isNotNull
         assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("5.25"))
-        assertThat(result.sourceCurrency.code).isEqualTo("USD")
+        assertThat(result.sourceCurrency.code).isEqualTo("United-States-Dollar")
         assertThat(result.targetCurrency.code).isEqualTo("Brazil-Real")
     }
 

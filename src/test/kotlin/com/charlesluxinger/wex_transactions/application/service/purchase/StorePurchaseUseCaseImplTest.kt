@@ -30,8 +30,8 @@ class StorePurchaseUseCaseImplTest {
     @Mock
     private lateinit var exchangeRateClientPort: ExchangeRateClientPort
 
-    private val usd = TargetCurrency("USD")
-    private val brl = TargetCurrency("BRL")
+    private val usd = TargetCurrency("United-States-Dollar")
+    private val brl = TargetCurrency("Brazil-Real")
 
     @Test
     @DisplayName("Stores purchase successfully with rounded amount and converted amount")
@@ -51,9 +51,9 @@ class StorePurchaseUseCaseImplTest {
             StorePurchaseCommand(
                 description = "  New TV  ",
                 transactionAmount = BigDecimal("10.005"),
-                transactionCurrency = "USD",
+                transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
             )
         val rate = sampleRate("5.678")
 
@@ -67,8 +67,8 @@ class StorePurchaseUseCaseImplTest {
         assertEquals(BigDecimal("10.01"), savedPurchase.transactionAmount)
         assertEquals(BigDecimal("5.68"), savedPurchase.exchangeRate.rate)
         assertEquals(BigDecimal("56.86"), savedPurchase.convertedAmount)
-        assertEquals("USD", savedPurchase.transactionCurrency.code)
-        assertEquals("BRL", savedPurchase.targetCurrency.code)
+        assertEquals("United-States-Dollar", savedPurchase.transactionCurrency.code)
+        assertEquals("Brazil-Real", savedPurchase.targetCurrency.code)
         assertEquals(TransactionDate("2026-05-23T12:00:00Z"), savedPurchase.transactionDate)
         assertEquals(savedPurchase.convertedAmount, result.convertedAmount)
     }
@@ -81,9 +81,9 @@ class StorePurchaseUseCaseImplTest {
             StorePurchaseCommand(
                 description = "   ",
                 transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = "USD",
+                transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
@@ -99,9 +99,9 @@ class StorePurchaseUseCaseImplTest {
             StorePurchaseCommand(
                 description = "x".repeat(51),
                 transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = "USD",
+                transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
@@ -117,9 +117,9 @@ class StorePurchaseUseCaseImplTest {
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal.ZERO,
-                transactionCurrency = "USD",
+                transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
@@ -128,21 +128,21 @@ class StorePurchaseUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Only USD source currency is accepted")
+    @DisplayName("Only United-States-Dollar source currency is accepted")
     fun `non usd source currency throws exception`() {
         val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort, exchangeRateClientPort)
         val command =
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = "EUR",
+                transactionCurrency = "Brazil-Real",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
             )
 
         val exception = assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
 
-        assertEquals("Only USD purchases are supported", exception.message)
+        assertEquals("Only United-States-Dollar purchases are supported", exception.message)
         verifyNoInteractions(exchangeRateClientPort)
         verifyNoInteractions(purchaseRepositoryPort)
     }
@@ -155,9 +155,9 @@ class StorePurchaseUseCaseImplTest {
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = "US",
+                transactionCurrency = "",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(InvalidCurrencyException::class.java) { useCase.storePurchase(command) }
@@ -173,9 +173,9 @@ class StorePurchaseUseCaseImplTest {
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = "USD",
+                transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "B1L",
+                targetCurrency = "",
             )
 
         assertThrows(InvalidCurrencyException::class.java) { useCase.storePurchase(command) }
@@ -191,9 +191,9 @@ class StorePurchaseUseCaseImplTest {
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = "USD",
+                transactionCurrency = "United-States-Dollar",
                 transactionDate = "23-05-2026 12:00:00",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
@@ -209,9 +209,9 @@ class StorePurchaseUseCaseImplTest {
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = "USD",
+                transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "BRL",
+                targetCurrency = "Brazil-Real",
             )
 
         `when`(exchangeRateClientPort.fetchRate(usd, brl)).thenThrow(RuntimeException("Treasury down"))
@@ -224,8 +224,8 @@ class StorePurchaseUseCaseImplTest {
     private fun sampleRate(rate: String): ExchangeRate =
         ExchangeRate(
             rate = BigDecimal(rate),
-            sourceCurrency = TargetCurrency("USD"),
-            targetCurrency = TargetCurrency("BRL"),
+            sourceCurrency = TargetCurrency("United-States-Dollar"),
+            targetCurrency = TargetCurrency("Brazil-Real"),
             retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
         )
 }

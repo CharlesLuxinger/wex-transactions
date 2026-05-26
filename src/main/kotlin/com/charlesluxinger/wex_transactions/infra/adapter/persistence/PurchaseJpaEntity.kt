@@ -26,11 +26,11 @@ class PurchaseJpaEntity(
     var description: String,
     @Column(name = "transaction_amount", nullable = false, precision = 18, scale = 2)
     var transactionAmount: BigDecimal,
-    @Column(name = "transaction_currency", nullable = false, length = 3)
+    @Column(name = "transaction_currency", nullable = false, length = 50)
     var transactionCurrency: String,
     @Column(name = "transaction_date", nullable = false)
     var transactionDate: Instant,
-    @Column(name = "target_currency", nullable = false, length = 3)
+    @Column(name = "target_currency", nullable = false, length = 50)
     var targetCurrency: String,
     @Column(name = "exchange_rate", nullable = false, precision = 18, scale = 2)
     var exchangeRate: BigDecimal,

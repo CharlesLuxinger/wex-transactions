@@ -22,9 +22,9 @@ class PurchaseJpaEntityTest {
             id: Long? = null,
             description: String = "Flight to NYC",
             transactionAmount: BigDecimal = BigDecimal("1500.00"),
-            transactionCurrency: String = "USD",
+            transactionCurrency: String = "United-States-Dollar",
             transactionDate: Instant = NOW,
-            targetCurrency: String = "BRL",
+            targetCurrency: String = "Brazil-Real",
             exchangeRate: BigDecimal = BigDecimal("5.123456"),
             convertedAmount: BigDecimal = BigDecimal("7684.90"),
             createdAt: Instant = NOW,
@@ -47,9 +47,9 @@ class PurchaseJpaEntityTest {
         assertEquals(null, purchase.id)
         assertEquals("Flight to NYC", purchase.description)
         assertEquals(BigDecimal("1500.00"), purchase.transactionAmount)
-        assertEquals("USD", purchase.transactionCurrency)
+        assertEquals("United-States-Dollar", purchase.transactionCurrency)
         assertEquals(NOW, purchase.transactionDate)
-        assertEquals("BRL", purchase.targetCurrency)
+        assertEquals("Brazil-Real", purchase.targetCurrency)
         assertEquals(BigDecimal("5.123456"), purchase.exchangeRate)
         assertEquals(BigDecimal("7684.90"), purchase.convertedAmount)
         assertEquals(NOW, purchase.createdAt)
@@ -111,7 +111,7 @@ class PurchaseJpaEntityTest {
                 id = 999L,
                 description = "Complex",
                 transactionAmount = BigDecimal("9999.99"),
-                transactionCurrency = "EUR",
+                transactionCurrency = "Brazil-Real",
                 transactionDate = LATER,
                 targetCurrency = "GBP",
                 exchangeRate = BigDecimal("1.123456"),
@@ -122,7 +122,7 @@ class PurchaseJpaEntityTest {
         assertEquals(999L, purchase.id)
         assertEquals("Complex", purchase.description)
         assertEquals(BigDecimal("9999.99"), purchase.transactionAmount)
-        assertEquals("EUR", purchase.transactionCurrency)
+        assertEquals("Brazil-Real", purchase.transactionCurrency)
         assertEquals(LATER, purchase.transactionDate)
         assertEquals("GBP", purchase.targetCurrency)
         assertEquals(BigDecimal("1.123456"), purchase.exchangeRate)
@@ -143,14 +143,14 @@ class PurchaseJpaEntityTest {
                 id = 100L,
                 description = "Subscription",
                 transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = TargetCurrency("USD"),
+                transactionCurrency = TargetCurrency("United-States-Dollar"),
                 transactionDate = TransactionDate(LocalDateTime.of(2026, 5, 23, 12, 0, 0)),
-                targetCurrency = TargetCurrency("BRL"),
+                targetCurrency = TargetCurrency("Brazil-Real"),
                 exchangeRate =
                     ExchangeRate(
                         rate = BigDecimal("5.250000"),
-                        sourceCurrency = TargetCurrency("USD"),
-                        targetCurrency = TargetCurrency("BRL"),
+                        sourceCurrency = TargetCurrency("United-States-Dollar"),
+                        targetCurrency = TargetCurrency("Brazil-Real"),
                         retrievedAt = NOW,
                     ),
                 convertedAmount = BigDecimal("52.50"),

@@ -4765,7 +4765,7 @@
       "norm_label": ".`should fail when currency is invalid`()"
     },
     {
-      "label": ".`should fail when transaction currency is not USD`()",
+      "label": ".`should fail when transaction currency is not United-States-Dollar`()",
       "file_type": "code",
       "source_file": "C:\\Users\\charl\\Projetos\\wex-transactions\\src\\test\\kotlin\\com\\charlesluxinger\\wex_transactions\\infra\\client\\purchase\\PurchaseControllerV1Test.kt",
       "source_location": "L225",

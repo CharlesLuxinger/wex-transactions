@@ -1,9 +1,6 @@
 package com.charlesluxinger.wex_transactions.domain.model
 
-import jakarta.validation.constraints.NotBlank
-
 class TargetCurrency(
-    @field:NotBlank
     code: String,
 ) {
     val code: String = code.trim()

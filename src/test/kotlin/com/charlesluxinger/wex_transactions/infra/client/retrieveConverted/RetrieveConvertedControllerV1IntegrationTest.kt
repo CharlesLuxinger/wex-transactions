@@ -63,19 +63,19 @@ class RetrieveConvertedControllerV1IntegrationTest :
         stubDefaultTreasuryRate("1.00")
         stubTreasuryRateForDate("2026-01-16", "5.10")
 
-        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
 
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
             .body("exchangeRateUsed", equalTo(5.10f))
             .body("convertedAmount", equalTo(510.00f))
-            .body("targetCurrency", equalTo("BRL"))
+            .body("targetCurrency", equalTo("BRAZIL-REAL"))
 
-        val cached = awaitCache("exchangeRate:USD:Brazil-Real:2026-01-16")
+        val cached = awaitCache("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-16")
         assertThat(cached).isNotBlank()
     }
 
@@ -85,24 +85,24 @@ class RetrieveConvertedControllerV1IntegrationTest :
         stubDefaultTreasuryRate("1.00")
         stubTreasuryRateForDate("2026-01-16", "5.10")
 
-        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
 
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
 
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
             .body("exchangeRateUsed", equalTo(5.10f))
 
-        awaitCache("exchangeRate:USD:Brazil-Real:2026-01-16")
+        awaitCache("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-16")
 
         val treasuryCallsForDate =
             server.findAll(
@@ -115,16 +115,16 @@ class RetrieveConvertedControllerV1IntegrationTest :
     @Test
     @DisplayName("Retrieve converted falls back to treasury when redis value is malformed")
     fun `retrieve converted falls back to treasury when redis value is malformed`() {
-        stubDefaultTreasuryRate("1.00")
+        stubDefaultTreasuryRate("5.20")
         stubTreasuryRateForDate("2026-01-16", "5.20")
 
-        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
-        redisTemplate.opsForValue().set("exchangeRate:USD:Brazil-Real:2026-01-16", "{invalid-json")
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
+        redisTemplate.opsForValue().set("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-16", "{invalid-json")
 
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
             .body("exchangeRateUsed", equalTo(5.20f))
@@ -136,7 +136,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             )
         assertThat(treasuryCallsForDate).hasSize(1)
 
-        val cached = awaitCache("exchangeRate:USD:Brazil-Real:2026-01-16")
+        val cached = awaitCache("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-16")
         val cacheValue = objectMapper.readTree(cached)
         assertThat(cacheValue.path("rate").asText()).isEqualTo("5.20")
     }
@@ -147,7 +147,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/999999/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/999999/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(404)
             .body("title", equalTo("Not Found"))
@@ -160,17 +160,17 @@ class RetrieveConvertedControllerV1IntegrationTest :
         stubDefaultTreasuryRate("1.00")
         stubTreasuryNoRateForDate("2026-01-16")
 
-        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
 
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(422)
             .body("status", equalTo(422))
             .body("title", equalTo("Conversion Unavailable"))
-            .body("detail", equalTo("Exchange rate unavailable: USD → Brazil-Real"))
+            .body("detail", equalTo("Exchange rate unavailable: United-States-Dollar → Brazil-Real"))
             .body("type", equalTo("about:blank"))
     }
 
@@ -178,17 +178,17 @@ class RetrieveConvertedControllerV1IntegrationTest :
     @DisplayName("Retrieve converted returns latest cached rate when treasury fails")
     fun `retrieve converted uses Fallback latest cached rate when treasury fails`() {
         stubDefaultTreasuryRate("1.00")
-        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
         val staleCachedRate =
             """
             {
               "rate": "5.45",
-              "sourceCurrency": "USD",
+              "sourceCurrency": "United-States-Dollar",
               "targetCurrency": "Brazil-Real",
               "retrievedAt": "2026-01-15T12:00:00Z"
             }
             """.trimIndent()
-        redisTemplate.opsForValue().set("exchangeRate:USD:Brazil-Real:2026-01-10", staleCachedRate)
+        redisTemplate.opsForValue().set("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-10", staleCachedRate)
 
         server.stubFor(
             get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
@@ -210,7 +210,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
             .body("exchangeRateUsed", equalTo(5.45f))
@@ -221,12 +221,12 @@ class RetrieveConvertedControllerV1IntegrationTest :
     @DisplayName("Retrieve converted fallback uses latest cached key across dates")
     fun `retrieve converted Fallback uses latest cached key ignoring date`() {
         stubDefaultTreasuryRate("1.00")
-        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
         val olderCache =
             """
             {
               "rate": "5.20",
-              "sourceCurrency": "USD",
+              "sourceCurrency": "United-States-Dollar",
               "targetCurrency": "Brazil-Real",
               "retrievedAt": "2026-01-12T12:00:00Z"
             }
@@ -235,13 +235,13 @@ class RetrieveConvertedControllerV1IntegrationTest :
             """
             {
               "rate": "5.60",
-              "sourceCurrency": "USD",
+              "sourceCurrency": "United-States-Dollar",
               "targetCurrency": "Brazil-Real",
               "retrievedAt": "2026-01-15T12:00:00Z"
             }
             """.trimIndent()
-        redisTemplate.opsForValue().set("exchangeRate:USD:Brazil-Real:2026-01-10", olderCache)
-        redisTemplate.opsForValue().set("exchangeRate:USD:Brazil-Real:2026-01-15", newerCache)
+        redisTemplate.opsForValue().set("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-10", olderCache)
+        redisTemplate.opsForValue().set("exchangeRate:United-States-Dollar:Brazil-Real:2026-01-15", newerCache)
 
         server.stubFor(
             get(urlPathEqualTo("/services/api/fiscal_service/v1/accounting/od/rates_of_exchange"))
@@ -263,7 +263,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
             .body("exchangeRateUsed", equalTo(5.60f))
@@ -273,7 +273,9 @@ class RetrieveConvertedControllerV1IntegrationTest :
     @Test
     @DisplayName("Retrieve converted returns 400 when targetCurrency is blank")
     fun `retrieve converted returns 400 when target currency is blank`() {
-        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z")
+        stubDefaultTreasuryRate("1.00")
+        stubTreasuryRateForDate("2026-01-16", "5.10")
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z")
 
         givenJson()
             .accept(ContentType.JSON)
@@ -293,12 +295,12 @@ class RetrieveConvertedControllerV1IntegrationTest :
         stubDefaultTreasuryRate("1.00")
         stubTreasuryRateForDate("2026-01-16", "5.10")
 
-        val purchaseId = createPurchase("BRL", "2026-01-16T10:00:00Z", BigDecimal("10.005"))
+        val purchaseId = createPurchase("Brazil-Real", "2026-01-16T10:00:00Z", BigDecimal("10.005"))
 
         givenJson()
             .accept(ContentType.JSON)
             .`when`()
-            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=BRL")
+            .get("/api/v1/purchases/$purchaseId/converted?targetCurrency=Brazil-Real")
             .then()
             .statusCode(200)
             .body("convertedAmount", equalTo(51.05f))
@@ -314,7 +316,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
                 mapOf(
                     "description" to "Lunch at Restaurant",
                     "transactionAmount" to amount,
-                    "transactionCurrency" to "USD",
+                    "transactionCurrency" to "United-States-Dollar",
                     "transactionDate" to transactionDate,
                     "targetCurrency" to targetCurrency,
                 ),

@@ -10,37 +10,37 @@ class ExchangeRateCacheKeyBuilderTest {
     fun `buildCacheKey uses exchangeRate source target date format`() {
         val key =
             ExchangeRateCacheKeyBuilder.buildCacheKey(
-                TargetCurrency("USD"),
+                TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Canada-Dollar"),
                 LocalDate.of(2024, 1, 15),
             )
 
-        assertEquals("exchangeRate:USD:Canada-Dollar:2024-01-15", key)
+        assertEquals("exchangeRate:United-States-Dollar:Canada-Dollar:2024-01-15", key)
     }
 
     @Test
     fun `buildCacheKey creates distinct keys for distinct dates`() {
         val olderDateKey =
             ExchangeRateCacheKeyBuilder.buildCacheKey(
-                TargetCurrency("USD"),
+                TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Canada-Dollar"),
                 LocalDate.of(2024, 1, 14),
             )
         val newerDateKey =
             ExchangeRateCacheKeyBuilder.buildCacheKey(
-                TargetCurrency("USD"),
+                TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Canada-Dollar"),
                 LocalDate.of(2024, 1, 15),
             )
 
-        assertEquals("exchangeRate:USD:Canada-Dollar:2024-01-14", olderDateKey)
-        assertEquals("exchangeRate:USD:Canada-Dollar:2024-01-15", newerDateKey)
+        assertEquals("exchangeRate:United-States-Dollar:Canada-Dollar:2024-01-14", olderDateKey)
+        assertEquals("exchangeRate:United-States-Dollar:Canada-Dollar:2024-01-15", newerDateKey)
     }
 
     @Test
     fun `buildPairPrefix uses exchangeRate source target prefix format`() {
-        val keyPrefix = ExchangeRateCacheKeyBuilder.buildPairPrefix(TargetCurrency("USD"), TargetCurrency("BRL"))
+        val keyPrefix = ExchangeRateCacheKeyBuilder.buildPairPrefix(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"))
 
-        assertEquals("exchangeRate:USD:BRL:", keyPrefix)
+        assertEquals("exchangeRate:United-States-Dollar:Brazil-Real:", keyPrefix)
     }
 }

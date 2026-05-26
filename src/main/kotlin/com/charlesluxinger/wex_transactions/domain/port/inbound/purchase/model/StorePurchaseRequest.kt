@@ -15,11 +15,10 @@ data class StorePurchaseRequest(
     @field:DecimalMin(value = "0.0", inclusive = false, message = "Transaction amount must be positive")
     val transactionAmount: BigDecimal,
     @field:NotBlank(message = "Transaction currency must not be blank")
-    @field:Pattern(regexp = "^USD$", message = "Transaction currency must be USD")
+    @field:Pattern(regexp = "^United-States-Dollar$", message = "Transaction currency must be United-States-Dollar")
     val transactionCurrency: String,
     @field:NotBlank(message = "Transaction date must not be blank")
     val transactionDate: String,
     @field:NotBlank(message = "Target currency must not be blank")
-    @field:Pattern(regexp = "^[A-Za-z]{3}$", message = "Invalid currency code")
     val targetCurrency: String,
 )

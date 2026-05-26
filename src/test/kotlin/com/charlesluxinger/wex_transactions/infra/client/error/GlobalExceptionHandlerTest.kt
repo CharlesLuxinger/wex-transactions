@@ -167,12 +167,12 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("RateUnavailableException returns UNPROCESSABLE_ENTITY with Conversion Unavailable title")
     fun `handle rate unavailable exception`() {
-        val ex = RateUnavailableException("USD", "BRL")
+        val ex = RateUnavailableException("United-States-Dollar", "Brazil-Real")
         val response = handler.handleRateUnavailableException(ex)
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY)
         assertThat(response.body?.title).isEqualTo("Conversion Unavailable")
-        assertThat(response.body?.detail).isEqualTo("Exchange rate unavailable: USD → BRL")
+        assertThat(response.body?.detail).isEqualTo("Exchange rate unavailable: United-States-Dollar → Brazil-Real")
     }
 
     @Test

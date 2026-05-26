@@ -12,16 +12,16 @@ import com.charlesluxinger.wex_transactions.infra.adapter.event.config.ExchangeR
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentCaptor
-import org.mockito.Mockito.doThrow
-import org.mockito.Mockito.mock
+import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.Mock
 import org.mockito.Mockito.never
-import org.mockito.Mockito.times
+import org.mockito.Mockito.reset
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.mockito.junit.jupiter.MockitoExtension
 import org.slf4j.LoggerFactory
 import org.springframework.data.redis.connection.stream.MapRecord
 import org.springframework.data.redis.core.StreamOperations
@@ -31,72 +31,78 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 
+@ExtendWith(MockitoExtension::class)
 class ExchangeRateFetchedEventListenerTest {
-    private val exchangeRateCachePort = mock(ExchangeRateCachePort::class.java)
-    private val stringRedisTemplate = mock(StringRedisTemplate::class.java)
+    @Mock
+    private lateinit var exchangeRateCachePort: ExchangeRateCachePort
 
-    @Suppress("UNCHECKED_CAST")
-    private val streamOperations =
-        mock(StreamOperations::class.java) as StreamOperations<String, String, String>
+    @Mock
+    private lateinit var stringRedisTemplate: StringRedisTemplate
+
+    @Mock
+    private lateinit var streamOperations: StreamOperations<String, String, String>
 
     private val streamProperties = ExchangeRateEventsStreamProperties()
     private val objectMapper = ObjectMapper().findAndRegisterModules()
+
+    @BeforeEach
+    fun setUp() {
+        reset(exchangeRateCachePort, stringRedisTemplate, streamOperations)
+    }
 
     @Test
     fun `happy path should save cache with exact event params including rate date`() {
         val listener = createListener()
         val event = sampleEvent(rateDate = LocalDate.parse("2026-01-16"))
         val record = eventRecord(event)
+        val expectedRate =
+            ExchangeRate(
+                rate = event.rate,
+                sourceCurrency = TargetCurrency(event.sourceCurrency),
+                targetCurrency = TargetCurrency(event.targetCurrency),
+                retrievedAt = event.retrievedAt,
+            )
 
         listener.onMessage(record)
 
-        val sourceCaptor = ArgumentCaptor.forClass(TargetCurrency::class.java)
-        val targetCaptor = ArgumentCaptor.forClass(TargetCurrency::class.java)
-        val rateDateCaptor = ArgumentCaptor.forClass(LocalDate::class.java)
-        val rateCaptor = ArgumentCaptor.forClass(ExchangeRate::class.java)
-
-        verify(exchangeRateCachePort, times(1)).saveRate(
-            sourceCaptor.capture(),
-            targetCaptor.capture(),
-            rateDateCaptor.capture(),
-            rateCaptor.capture(),
+        verify(exchangeRateCachePort).saveRate(
+            TargetCurrency(event.sourceCurrency),
+            TargetCurrency(event.targetCurrency),
+            event.rateDate,
+            expectedRate,
         )
 
-        assertEquals("USD", sourceCaptor.value.code)
-        assertEquals("BRL", targetCaptor.value.code)
-        assertEquals(LocalDate.parse("2026-01-16"), rateDateCaptor.value)
-        assertNotNull(rateCaptor.value)
-        assertEquals(BigDecimal("5.2500"), rateCaptor.value.rate)
-        assertEquals("USD", rateCaptor.value.sourceCurrency.code)
-        assertEquals("BRL", rateCaptor.value.targetCurrency.code)
-        assertEquals(Instant.parse("2026-01-15T12:00:00Z"), rateCaptor.value.retrievedAt)
-
-        verify(streamOperations, times(1)).acknowledge(streamProperties.group, record)
+        verify(streamOperations).acknowledge(streamProperties.group, record)
     }
 
     @Test
     fun `failure path should catch cache exception log and not rethrow`() {
-        val listener = createListener()
+        val failingCachePort =
+            object : ExchangeRateCachePort {
+                override fun getRate(
+                    sourceCurrency: TargetCurrency,
+                    targetCurrency: TargetCurrency,
+                    rateDate: LocalDate,
+                ): ExchangeRate? = null
+
+                override fun saveRate(
+                    sourceCurrency: TargetCurrency,
+                    targetCurrency: TargetCurrency,
+                    rateDate: LocalDate,
+                    rate: ExchangeRate,
+                ) {
+                    throw IOException("cache unavailable")
+                }
+
+                override fun getLatestRate(
+                    sourceCurrency: TargetCurrency,
+                    targetCurrency: TargetCurrency,
+                ): ExchangeRate? = null
+            }
+        val listener = createListener(failingCachePort)
         val expectedRateDate = LocalDate.parse("2026-01-16")
         val event = sampleEvent(rateDate = expectedRateDate)
         val record = eventRecord(event)
-
-        val expectedRate =
-            ExchangeRate(
-                rate = BigDecimal("5.25"),
-                sourceCurrency = TargetCurrency("USD"),
-                targetCurrency = TargetCurrency("BRL"),
-                retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
-            )
-
-        doThrow(IOException("cache unavailable"))
-            .`when`(exchangeRateCachePort)
-            .saveRate(
-                TargetCurrency("USD"),
-                TargetCurrency("BRL"),
-                expectedRateDate,
-                expectedRate,
-            )
 
         val logger = LoggerFactory.getLogger(ExchangeRateFetchedEventListener::class.java) as Logger
         val appender = ListAppender<ILoggingEvent>()
@@ -106,12 +112,6 @@ class ExchangeRateFetchedEventListenerTest {
         try {
             assertDoesNotThrow { listener.onMessage(record) }
 
-            verify(exchangeRateCachePort, times(1)).saveRate(
-                TargetCurrency("USD"),
-                TargetCurrency("BRL"),
-                expectedRateDate,
-                expectedRate,
-            )
             verify(streamOperations, never()).acknowledge(streamProperties.group, record)
 
             assertTrue(
@@ -130,8 +130,8 @@ class ExchangeRateFetchedEventListenerTest {
         val exchangeRate =
             ExchangeRate(
                 rate = BigDecimal("5.1234"),
-                sourceCurrency = TargetCurrency("USD"),
-                targetCurrency = TargetCurrency("BRL"),
+                sourceCurrency = TargetCurrency("United-States-Dollar"),
+                targetCurrency = TargetCurrency("Brazil-Real"),
                 retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
             )
 
@@ -150,24 +150,28 @@ class ExchangeRateFetchedEventListenerTest {
         val expectedRateDate = LocalDate.parse("2026-02-03")
         val event = sampleEvent(rateDate = expectedRateDate)
         val record = eventRecord(event)
+        val expectedRate =
+            ExchangeRate(
+                rate = event.rate,
+                sourceCurrency = TargetCurrency(event.sourceCurrency),
+                targetCurrency = TargetCurrency(event.targetCurrency),
+                retrievedAt = event.retrievedAt,
+            )
 
         listener.onMessage(record)
 
-        val rateDateCaptor = ArgumentCaptor.forClass(LocalDate::class.java)
         verify(exchangeRateCachePort).saveRate(
-            org.mockito.ArgumentMatchers.any(TargetCurrency::class.java),
-            org.mockito.ArgumentMatchers.any(TargetCurrency::class.java),
-            rateDateCaptor.capture(),
-            org.mockito.ArgumentMatchers.any(ExchangeRate::class.java),
+            TargetCurrency(event.sourceCurrency),
+            TargetCurrency(event.targetCurrency),
+            expectedRateDate,
+            expectedRate,
         )
-
-        assertEquals(expectedRateDate, rateDateCaptor.value)
     }
 
-    private fun createListener(): ExchangeRateFetchedEventListener {
+    private fun createListener(cachePort: ExchangeRateCachePort = exchangeRateCachePort): ExchangeRateFetchedEventListener {
         `when`(stringRedisTemplate.opsForStream<String, String>()).thenReturn(streamOperations)
         return ExchangeRateFetchedEventListener(
-            exchangeRateCachePort = exchangeRateCachePort,
+            exchangeRateCachePort = cachePort,
             stringRedisTemplate = stringRedisTemplate,
             streamProperties = streamProperties,
             objectMapper = objectMapper,
@@ -181,8 +185,8 @@ class ExchangeRateFetchedEventListenerTest {
 
     private fun sampleEvent(rateDate: LocalDate): ExchangeRateFetchedEvent =
         ExchangeRateFetchedEvent(
-            sourceCurrency = "USD",
-            targetCurrency = "BRL",
+            sourceCurrency = "United-States-Dollar",
+            targetCurrency = "Brazil-Real",
             rate = BigDecimal("5.25"),
             retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
             rateDate = rateDate,

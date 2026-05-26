@@ -60,7 +60,7 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
 
         val result =
             adapter.fetchNearestPriorRate(
-                TargetCurrency("USD"),
+                TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
                 LocalDate.parse("2026-05-23"),
             )
@@ -86,7 +86,7 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
 
         val result =
             adapter.fetchNearestPriorRate(
-                TargetCurrency("USD"),
+                TargetCurrency("United-States-Dollar"),
                 TargetCurrency("Brazil-Real"),
                 LocalDate.parse("2026-05-23"),
             )
@@ -128,13 +128,13 @@ class ExchangeRateTreasuryAdapterHttpIntegrationTest : AbstractRestApiIntegratio
         val thrown =
             assertThrows<RateUnavailableException> {
                 adapter.fetchNearestPriorRate(
-                    TargetCurrency("USD"),
+                    TargetCurrency("United-States-Dollar"),
                     TargetCurrency("Brazil-Real"),
                     LocalDate.parse("2026-05-23"),
                 )
             }
 
-        assertThat(thrown.from).isEqualTo("USD")
+        assertThat(thrown.from).isEqualTo("United-States-Dollar")
         assertThat(thrown.to).isEqualTo("Brazil-Real")
     }
 

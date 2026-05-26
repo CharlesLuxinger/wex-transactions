@@ -194,7 +194,7 @@ Wave 3: evidence consolidation, strict verdicting, blocker registry, final compl
   ```
   Scenario: Deterministic startup
     Tool: Bash
-    Steps: Run docker build/up/ps/health checks exactly as runbook; seed using `docker compose exec -T postgres psql -U postgres -d wex_transactions -c "INSERT INTO exchange_rates(rate_date,source_currency,target_currency,exchange_rate,created_at) VALUES ('2026-01-15','USD','BRL',5.100000,'2026-01-15T12:00:00Z') ON CONFLICT (rate_date,source_currency,target_currency) DO NOTHING;"`; verify using `docker compose exec -T postgres psql -U postgres -d wex_transactions -c "SELECT rate_date,source_currency,target_currency,exchange_rate,created_at FROM exchange_rates WHERE source_currency='USD' AND target_currency='BRL' AND rate_date='2026-01-15';"`.
+    Steps: Run docker build/up/ps/health checks exactly as runbook; seed using `docker compose exec -T postgres psql -U postgres -d wex_transactions -c "INSERT INTO exchange_rates(rate_date,source_currency,target_currency,exchange_rate,created_at) VALUES ('2026-01-15','United-States-Dollar','BRL',5.100000,'2026-01-15T12:00:00Z') ON CONFLICT (rate_date,source_currency,target_currency) DO NOTHING;"`; verify using `docker compose exec -T postgres psql -U postgres -d wex_transactions -c "SELECT rate_date,source_currency,target_currency,exchange_rate,created_at FROM exchange_rates WHERE source_currency='United-States-Dollar' AND target_currency='BRL' AND rate_date='2026-01-15';"`.
     Expected: App and DB healthy before API execution; seed row exists and is queryable.
     Evidence: .sisyphus/evidence/task-3-runtime-setup.txt
 
