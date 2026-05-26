@@ -26,9 +26,11 @@ class Purchase(
     override fun equals(other: Any?): Boolean = this === other || (other is Purchase && id == other.id)
 
     override fun hashCode(): Int = id.hashCode()
-    fun convertedAmount(rate: BigDecimal) = this.transactionAmount
-        .multiply(rate)
-        .toMonetaryScale()
+
+    fun convertedAmount(rate: BigDecimal) =
+        this.transactionAmount
+            .multiply(rate)
+            .toMonetaryScale()
 
     companion object {
         const val MAX_DESCRIPTION_LENGTH = 50
