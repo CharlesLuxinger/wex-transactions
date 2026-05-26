@@ -4,16 +4,64 @@ import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyExceptio
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import feign.FeignException
+import io.github.resilience4j.ratelimiter.RequestNotPermitted
+import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import java.net.URI
+
+private const val HTTP_CLIENT_ERROR_MAX = 499
+
+private fun mapFeignException(ex: FeignException): Triple<HttpStatus, String, String> =
+    when (ex.status()) {
+        HttpStatus.TOO_MANY_REQUESTS.value() ->
+            Triple(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "Too Many Requests",
+                "Dependent service rate limit exceeded",
+            )
+        in HttpStatus.BAD_REQUEST.value()..HTTP_CLIENT_ERROR_MAX ->
+            Triple(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "Conversion Unavailable",
+                "Dependent service rejected the conversion request",
+            )
+        else ->
+            Triple(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Service Unavailable",
+                "Dependent service unavailable",
+            )
+    }
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+    @ExceptionHandler(ConstraintViolationException::class)
+    fun handleConstraintViolationException(ex: ConstraintViolationException): ResponseEntity<ProblemDetail> {
+        val fieldErrors =
+            ex.constraintViolations.map {
+                mapOf(
+                    "field" to it.propertyPath.toString(),
+                    "message" to it.message,
+                )
+            }
+        val firstMessage = fieldErrors.firstOrNull()?.get("message")?.toString() ?: "Validation failed"
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                firstMessage,
+            )
+        problemDetail.title = "Bad Request"
+        problemDetail.type = URI.create("about:blank")
+        problemDetail.setProperty("errors", fieldErrors)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail)
+    }
+
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgumentException(ex: IllegalArgumentException): ResponseEntity<ProblemDetail> {
         val problemDetail =
@@ -60,18 +108,37 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail)
     }
 
-    @ExceptionHandler(FeignException::class)
-    fun handleFeignException(
-        @Suppress("UnusedParameter") ex: FeignException,
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun handleMethodArgumentTypeMismatchException(
+        ex: MethodArgumentTypeMismatchException,
     ): ResponseEntity<ProblemDetail> {
+        val parameterName = ex.name ?: "parameter"
         val problemDetail =
             ProblemDetail.forStatusAndDetail(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "Dependent service unavailable",
+                HttpStatus.BAD_REQUEST,
+                "Invalid value for $parameterName",
             )
-        problemDetail.title = "Service Unavailable"
+        problemDetail.title = "Bad Request"
         problemDetail.type = URI.create("about:blank")
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problemDetail)
+        problemDetail.setProperty(
+            "errors",
+            listOf(
+                mapOf(
+                    "field" to parameterName,
+                    "message" to "Invalid value for $parameterName",
+                ),
+            ),
+        )
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail)
+    }
+
+    @ExceptionHandler(FeignException::class)
+    fun handleFeignException(ex: FeignException): ResponseEntity<ProblemDetail> {
+        val (httpStatus, title, detail) = mapFeignException(ex)
+        val problemDetail = ProblemDetail.forStatusAndDetail(httpStatus, detail)
+        problemDetail.title = title
+        problemDetail.type = URI.create("about:blank")
+        return ResponseEntity.status(httpStatus).body(problemDetail)
     }
 
     @ExceptionHandler(IllegalStateException::class)
@@ -161,5 +228,17 @@ class GlobalExceptionHandler {
         problemDetail.title = "Conversion Unavailable"
         problemDetail.type = URI.create("about:blank")
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(problemDetail)
+    }
+
+    @ExceptionHandler(RequestNotPermitted::class)
+    fun handleRequestNotPermitted(ex: RequestNotPermitted): ResponseEntity<ProblemDetail> {
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.TOO_MANY_REQUESTS,
+                ex.message ?: "Rate limit exceeded",
+            )
+        problemDetail.title = "Too Many Requests"
+        problemDetail.type = URI.create("about:blank")
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(problemDetail)
     }
 }

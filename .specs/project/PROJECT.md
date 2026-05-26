@@ -1,7 +1,7 @@
 # PROJECT — WEX Transactions Tech Challenge
 
 ## Vision
-Build a production-grade backend API that stores purchase transactions in USD and retrieves converted values using Treasury Reporting Rates, fully aligned with this repository’s Hexagonal + DDD constraints.
+Build a production-grade backend API that stores purchase transactions in United-States-Dollar and retrieves converted values using Treasury Reporting Rates, fully aligned with this repository’s Hexagonal + DDD constraints.
 
 ## Outcome
 Deliver an implementation that:

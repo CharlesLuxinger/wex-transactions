@@ -1,23 +1,24 @@
 package com.charlesluxinger.wex_transactions.application.service.retrieveConverted
 
+import com.charlesluxinger.wex_transactions.domain.event.ExchangeRateFetchedEvent
 import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
+import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyException
+import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
-import com.charlesluxinger.wex_transactions.domain.model.toMonetaryScale
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedResponse
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCachePort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateEventPort
-import com.charlesluxinger.wex_transactions.domain.event.ExchangeRateFetchedEvent
-import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Service
 class RetrieveConvertedUseCaseImpl(
@@ -32,42 +33,78 @@ class RetrieveConvertedUseCaseImpl(
                 ?: throw PurchaseNotFoundException(query.purchaseId)
 
         val sourceCurrency = purchase.transactionCurrency
-        val targetCurrency = TargetCurrency(query.targetCurrency)
+        val targetCurrency = TargetCurrency(query.targetCurrency.trim())
         val rateDate = purchase.transactionDate.value.toLocalDate()
         val rate =
-            exchangeRateCachePort.getRate(sourceCurrency, targetCurrency)
-                ?: fetchClient(sourceCurrency, targetCurrency, rateDate)
-                    ?.also { publishToCache(it, purchase) }
+            exchangeRateCachePort.getEligibleRate(sourceCurrency, targetCurrency, rateDate)
+                ?: fetchFromClientOrFallback(sourceCurrency, targetCurrency, rateDate, purchase)
 
-        rate ?: throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
-
-        val convertedAmount =
-            purchase.transactionAmount
-                .multiply(rate.rate)
-                .toMonetaryScale()
+        rate ?: throw resolveUnavailableException(sourceCurrency, targetCurrency)
 
         return RetrieveConvertedResponse(
             purchaseId = purchase.id,
             description = purchase.description,
             transactionDate = purchase.transactionDate.toCanonicalString(),
-            originalUsdAmount = purchase.transactionAmount,
-            exchangeRateUsed = rate.rate,
-            convertedAmount = convertedAmount,
-            targetCurrency = targetCurrency.code,
+            transactionAmount = purchase.transactionAmount,
+            transactionCurrency = purchase.transactionCurrency.value,
+            exchangeRate = rate.rate,
+            convertedAmount = purchase.convertedAmount(rate.rate),
+            targetCurrency = rate.targetCurrency.value,
             createdAt = purchase.createdAt,
         )
     }
 
-    private fun fetchClient(
+    @Suppress("TooGenericExceptionCaught")
+    private fun fetchFromClientOrFallback(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
+        purchase: Purchase,
     ): ExchangeRate? =
-        exchangeRateClientPort.fetchNearestPriorRate(
-            sourceCurrency = sourceCurrency,
-            targetCurrency = targetCurrency,
-            rateDate = rateDate,
-        )
+        try {
+            exchangeRateClientPort
+                .fetchNearestPriorRate(
+                    sourceCurrency = sourceCurrency,
+                    targetCurrency = targetCurrency,
+                    rateDate = rateDate,
+                )?.also { fetchedRate ->
+                    if (fetchedRate.targetCurrency.value.equals(targetCurrency.value, ignoreCase = true)) {
+                        publishToCache(fetchedRate, purchase)
+                    }
+                }
+        } catch (exception: Exception) {
+            val eligibleCachedRate =
+                exchangeRateCachePort.getEligibleRate(
+                    sourceCurrency = sourceCurrency,
+                    targetCurrency = targetCurrency,
+                    rateDate = rateDate,
+                )
+
+            if (eligibleCachedRate != null) {
+                logger.warn(
+                    "[USECASE][TREASURY_FETCH][FALLBACK_CACHE] sourceCurrency={} targetCurrency={} " +
+                        "cachedRetrievedAt={} message={}",
+                    sourceCurrency.value,
+                    targetCurrency.value,
+                    eligibleCachedRate.retrievedAt,
+                    exception.message,
+                    exception,
+                )
+                eligibleCachedRate
+            } else {
+                throw exception
+            }
+        }
+
+    private fun resolveUnavailableException(
+        sourceCurrency: TargetCurrency,
+        targetCurrency: TargetCurrency,
+    ): Exception =
+        if (exchangeRateClientPort.isSupportedCurrency(targetCurrency)) {
+            RateUnavailableException(sourceCurrency.value, targetCurrency.value)
+        } else {
+            InvalidCurrencyException(targetCurrency.value)
+        }
 
     @Suppress("TooGenericExceptionCaught")
     private fun publishToCache(
@@ -77,11 +114,11 @@ class RetrieveConvertedUseCaseImpl(
         try {
             exchangeRateEventPort.publish(
                 ExchangeRateFetchedEvent(
-                    sourceCurrency = rate.sourceCurrency.code,
-                    targetCurrency = rate.targetCurrency.code,
+                    sourceCurrency = rate.sourceCurrency.value,
+                    targetCurrency = rate.targetCurrency.value,
                     rate = rate.rate,
                     retrievedAt = rate.retrievedAt,
-                    rateDate = purchase.transactionDate.value.toLocalDate(),
+                    rateDate = rate.retrievedAt.atOffset(ZoneOffset.UTC).toLocalDate(),
                 ),
             )
         } catch (ex: Exception) {
@@ -90,9 +127,9 @@ class RetrieveConvertedUseCaseImpl(
                     "traceId={} purchaseId={} sourceCurrency={} targetCurrency={} rateDate={} message={}",
                 MDC.get(TRACE_ID_KEY),
                 purchase.id,
-                rate.sourceCurrency.code,
-                rate.targetCurrency.code,
-                purchase.transactionDate.value.toLocalDate(),
+                rate.sourceCurrency.value,
+                rate.targetCurrency.value,
+                rate.retrievedAt.atOffset(ZoneOffset.UTC).toLocalDate(),
                 ex.message,
                 ex,
             )

@@ -1,6 +1,5 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.persistence
 
-import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
@@ -28,11 +27,8 @@ class PurchaseRepositoryJPAAdapterTest {
                 id = 1L,
                 description = "Test purchase",
                 transactionAmount = BigDecimal("100.00"),
-                transactionCurrency = "USD",
+                transactionCurrency = "United-States-Dollar",
                 transactionDate = now,
-                targetCurrency = "BRL",
-                exchangeRate = BigDecimal("5.50"),
-                convertedAmount = BigDecimal("550.00"),
                 createdAt = now,
             )
         `when`(springDataRepository.findById(1L)).thenReturn(Optional.of(entity))
@@ -63,17 +59,8 @@ class PurchaseRepositoryJPAAdapterTest {
                 id = 1L,
                 description = "Test purchase",
                 transactionAmount = BigDecimal("100.00"),
-                transactionCurrency = TargetCurrency("USD"),
+                transactionCurrency = TargetCurrency("United-States-Dollar"),
                 transactionDate = TransactionDate("2026-01-10T15:30:45Z"),
-                targetCurrency = TargetCurrency("BRL"),
-                exchangeRate =
-                    ExchangeRate(
-                        rate = BigDecimal("5.50"),
-                        sourceCurrency = TargetCurrency("USD"),
-                        targetCurrency = TargetCurrency("BRL"),
-                        retrievedAt = now,
-                    ),
-                convertedAmount = BigDecimal("550.00"),
                 createdAt = now,
             )
 
@@ -82,11 +69,8 @@ class PurchaseRepositoryJPAAdapterTest {
                 id = 1L,
                 description = "Test purchase",
                 transactionAmount = BigDecimal("100.00"),
-                transactionCurrency = "USD",
+                transactionCurrency = "United-States-Dollar",
                 transactionDate = now,
-                targetCurrency = "BRL",
-                exchangeRate = BigDecimal("5.50"),
-                convertedAmount = BigDecimal("550.00"),
                 createdAt = now,
             )
 

@@ -21,13 +21,6 @@ data class StorePurchaseResponse(
     val transactionCurrency: String,
     @field:NotBlank(message = "Transaction date must not be blank")
     val transactionDate: String,
-    @field:NotBlank(message = "Target currency must not be blank")
-    @field:Size(min = 3, max = 3, message = "Target currency must be exactly 3 characters")
-    val targetCurrency: String,
-    @field:NotNull(message = "Exchange rate must not be null")
-    val exchangeRate: BigDecimal,
-    @field:NotNull(message = "Converted amount must not be null")
-    val convertedAmount: BigDecimal,
     @field:NotNull(message = "Created at must not be null")
     val createdAt: Instant,
 )

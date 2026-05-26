@@ -6,6 +6,8 @@ import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableExceptio
 import feign.FeignException
 import feign.Request
 import feign.Response
+import io.github.resilience4j.ratelimiter.RateLimiter
+import io.github.resilience4j.ratelimiter.RequestNotPermitted
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -17,6 +19,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import java.nio.charset.StandardCharsets
 import java.util.Collections
 
@@ -99,6 +102,62 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("FeignException with 429 returns TOO_MANY_REQUESTS")
+    fun `handle feign exception with rate limit status`() {
+        val request =
+            Request.create(
+                Request.HttpMethod.GET,
+                "https://example.test/resource",
+                emptyMap(),
+                null,
+                StandardCharsets.UTF_8,
+                null,
+            )
+        val feignResponse =
+            Response
+                .builder()
+                .status(429)
+                .reason("Too Many Requests")
+                .request(request)
+                .headers(Collections.emptyMap())
+                .build()
+        val ex = FeignException.errorStatus("treasuryClient#getRates", feignResponse)
+
+        val response = handler.handleFeignException(ex)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
+        assertThat(response.body?.title).isEqualTo("Too Many Requests")
+    }
+
+    @Test
+    @DisplayName("FeignException with 400 returns UNPROCESSABLE_ENTITY")
+    fun `handle feign exception with client error status`() {
+        val request =
+            Request.create(
+                Request.HttpMethod.GET,
+                "https://example.test/resource",
+                emptyMap(),
+                null,
+                StandardCharsets.UTF_8,
+                null,
+            )
+        val feignResponse =
+            Response
+                .builder()
+                .status(400)
+                .reason("Bad Request")
+                .request(request)
+                .headers(Collections.emptyMap())
+                .build()
+        val ex = FeignException.errorStatus("treasuryClient#getRates", feignResponse)
+
+        val response = handler.handleFeignException(ex)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY)
+        assertThat(response.body?.title).isEqualTo("Conversion Unavailable")
+    }
+
+    @Test
     @DisplayName("FeignException returns SERVICE_UNAVAILABLE with safe detail")
     fun `handle feign exception`() {
         val request =
@@ -165,11 +224,42 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("RateUnavailableException returns UNPROCESSABLE_ENTITY with Conversion Unavailable title")
     fun `handle rate unavailable exception`() {
-        val ex = RateUnavailableException("USD", "BRL")
+        val ex = RateUnavailableException("United-States-Dollar", "Brazil-Real")
         val response = handler.handleRateUnavailableException(ex)
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY)
         assertThat(response.body?.title).isEqualTo("Conversion Unavailable")
-        assertThat(response.body?.detail).isEqualTo("Exchange rate unavailable: USD → BRL")
+        assertThat(response.body?.detail).isEqualTo("Exchange rate unavailable: United-States-Dollar → Brazil-Real")
+    }
+
+    @Test
+    @DisplayName("MethodArgumentTypeMismatchException returns BAD_REQUEST")
+    fun `handle method argument type mismatch exception`() {
+        val ex =
+            MethodArgumentTypeMismatchException(
+                "abc",
+                Long::class.java,
+                "purchaseId",
+                mock(MethodParameter::class.java),
+                IllegalArgumentException("invalid long"),
+            )
+
+        val response = handler.handleMethodArgumentTypeMismatchException(ex)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(response.body?.title).isEqualTo("Bad Request")
+        assertThat(response.body?.detail).isEqualTo("Invalid value for purchaseId")
+    }
+
+    @Test
+    @DisplayName("RequestNotPermitted returns TOO_MANY_REQUESTS with expected title")
+    fun `handle request not permitted exception`() {
+        val ex = RequestNotPermitted.createRequestNotPermitted(RateLimiter.ofDefaults("treasury-api"))
+
+        val response = handler.handleRequestNotPermitted(ex)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
+        assertThat(response.body?.title).isEqualTo("Too Many Requests")
+        assertThat(response.body?.detail).contains("RateLimiter")
     }
 }

@@ -109,7 +109,7 @@ class Money extends ValueObject<{amount, currency}>:
         guard: currency in SUPPORTED_CURRENCIES
         return new Money({amount, currency})
 
-    static zero(currency = "USD") -> Money:
+    static zero(currency = "United-States-Dollar") -> Money:
         return Money.create(0, currency)
 
     add(other: Money) -> Money:
@@ -440,13 +440,13 @@ interface ShippingCostCalculator:
 class ShippingCostCalculatorImpl implements ShippingCostCalculator:
 
     calculate(items, destination) -> Money:
-        baseRate = Money.create(5.99, "USD")
-        perItemRate = Money.create(1.50, "USD")
+        baseRate = Money.create(5.99, "United-States-Dollar")
+        perItemRate = Money.create(1.50, "United-States-Dollar")
 
         total = baseRate.add(perItemRate.multiply(items.length))
 
         if destination.country != "US":
-            total = total.add(Money.create(15.00, "USD"))
+            total = total.add(Money.create(15.00, "United-States-Dollar"))
 
         return total
 ```
@@ -514,7 +514,7 @@ class OrderHasItemsSpec implements Specification<Order>:
     isSatisfiedBy(order) -> bool:
         return order.items.length > 0
 
-canShipFree = OrderOverValueSpec(Money.create(100, "USD"))
+canShipFree = OrderOverValueSpec(Money.create(100, "United-States-Dollar"))
     .and(OrderHasItemsSpec())
 
 if canShipFree.isSatisfiedBy(order):

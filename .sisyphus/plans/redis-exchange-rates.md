@@ -738,7 +738,7 @@ grep -r "WireMock\|Mockito" src/test/kotlin/  # Treasury mocking confirmed
 
   **What to do**:
   - Write unit tests for ExchangeRateCacheKeyBuilder:
-    - Test cache key format: "exchangeRate:USD:BRL" (given USD and BRL currencies)
+    - Test cache key format: "exchangeRate:United-States-Dollar:BRL" (given United-States-Dollar and BRL currencies)
   - Write unit tests for RedisExchangeRateCacheAdapter:
     - Mock StringRedisTemplate
     - Test getRate() hit scenario: JSON deserialization to ExchangeRate
@@ -1021,7 +1021,7 @@ grep -r "WireMock\|Mockito" src/test/kotlin/  # Treasury mocking confirmed
     Steps:
       1. Start app if not running: docker compose up -d
       2. Ensure a purchase exists (create via POST /api/v1/purchases)
-      3. GET http://localhost:8080/api/v1/purchases/{purchaseId}/converted?targetCurrency=BRL
+      3. GET http://localhost:8080/api/v1/purchases/{purchaseId}/converted?targetCurrency=Brazil-Real
       4. Verify response includes exchangeRateUsed and convertedAmount
     Expected: HTTP 200; response contains valid exchangeRateUsed (number > 0)
     Evidence: .sisyphus/evidence/F3-api-response.log

@@ -66,7 +66,7 @@ Each section includes:
 ## 3) Target Currency Format
 
 **What**
-- Target currency uses **ISO-4217 3-letter code** (e.g., `USD`, `EUR`).
+- Target currency uses **ISO-4217 3-letter code** (e.g., `United-States-Dollar`, `EUR`).
 
 **Why**
 - Derived spec locks `ISO-4217` as immutable token.

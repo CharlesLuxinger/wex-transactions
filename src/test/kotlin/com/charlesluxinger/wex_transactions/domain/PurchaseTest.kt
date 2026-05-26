@@ -24,8 +24,7 @@ class PurchaseTest {
         assertEquals(1L, purchase.id)
         assertEquals("Fuel purchase", purchase.description)
         assertEquals(BigDecimal("100.00"), purchase.transactionAmount)
-        assertEquals(TargetCurrency("USD"), purchase.transactionCurrency)
-        assertEquals(TargetCurrency("BRL"), purchase.targetCurrency)
+        assertEquals(TargetCurrency("United-States-Dollar"), purchase.transactionCurrency)
     }
 
     @Test
@@ -39,42 +38,33 @@ class PurchaseTest {
     @Test
     fun `should accept BigDecimal amounts`() {
         val amount = BigDecimal("1234567890.12")
-        val rate = ExchangeRate(BigDecimal("1.234567"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
+        val rate =
+            ExchangeRate(
+                BigDecimal("1.234567"),
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+                Instant.now(),
+            )
         val converted = amount.multiply(rate.rate).toMonetaryScale()
 
-        val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
+        val purchase = samplePurchase(transactionAmount = amount)
 
         assertEquals(amount, purchase.transactionAmount)
-        assertEquals(converted, purchase.convertedAmount)
     }
 
     @Test
     fun `should preserve TransactionDate and TargetCurrency as value objects`() {
         val date = TransactionDate(LocalDateTime.of(2026, 1, 2, 3, 4, 5))
-        val transactionCurrency = TargetCurrency("EUR")
-        val targetCurrency = TargetCurrency("GBP")
+        val transactionCurrency = TargetCurrency("Brazil-Real")
 
         val purchase =
             samplePurchase(
                 transactionDate = date,
                 transactionCurrency = transactionCurrency,
-                targetCurrency = targetCurrency,
             )
 
         assertEquals(date, purchase.transactionDate)
         assertEquals(transactionCurrency, purchase.transactionCurrency)
-        assertEquals(targetCurrency, purchase.targetCurrency)
-    }
-
-    @Test
-    fun `should store exchangeRate and convertedAmount`() {
-        val rate = ExchangeRate(BigDecimal("5.432100"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
-        val converted = BigDecimal("543.21")
-
-        val purchase = samplePurchase(exchangeRate = rate, convertedAmount = converted)
-
-        assertEquals(rate, purchase.exchangeRate)
-        assertEquals(converted, purchase.convertedAmount)
     }
 
     @Test
@@ -95,7 +85,7 @@ class PurchaseTest {
     fun `equals() should match on id only`() {
         val first = samplePurchase(id = 7L, transactionAmount = BigDecimal("1.00"))
         val second =
-            samplePurchase(id = 7L, transactionAmount = BigDecimal("999.00"), convertedAmount = BigDecimal("999.00"))
+            samplePurchase(id = 7L, transactionAmount = BigDecimal("999.00"))
 
         assertEquals(first, second)
     }
@@ -103,7 +93,7 @@ class PurchaseTest {
     @Test
     fun `hashCode() should depend on id`() {
         val first = samplePurchase(id = 7L)
-        val second = samplePurchase(id = 7L, convertedAmount = BigDecimal("999.99"))
+        val second = samplePurchase(id = 7L)
 
         assertEquals(first.hashCode(), second.hashCode())
     }
@@ -125,17 +115,6 @@ class PurchaseTest {
     }
 
     @Test
-    fun `convertedAmount should be calculable from rate and original amount`() {
-        val amount = BigDecimal("10.00")
-        val rate = ExchangeRate(BigDecimal("5.250000"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
-        val converted = amount.multiply(rate.rate).toMonetaryScale()
-
-        val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
-
-        assertEquals(BigDecimal("52.50"), purchase.convertedAmount)
-    }
-
-    @Test
     fun `should reject zero amounts`() {
         val error =
             assertFailsWith<IllegalArgumentException> {
@@ -143,17 +122,6 @@ class PurchaseTest {
             }
 
         assertEquals("Transaction amount must be positive", error.message)
-    }
-
-    @Test
-    fun `should handle very large amounts precision`() {
-        val amount = BigDecimal("999999999999.99")
-        val rate = ExchangeRate(BigDecimal("9.999999"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
-        val converted = amount.multiply(rate.rate).toMonetaryScale()
-
-        val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
-
-        assertEquals(converted, purchase.convertedAmount)
     }
 
     @Test
@@ -176,16 +144,6 @@ class PurchaseTest {
             }
 
         assertEquals("Purchase id must be positive", error.message)
-    }
-
-    @Test
-    fun `should reject negative converted amount`() {
-        val error =
-            assertFailsWith<IllegalArgumentException> {
-                samplePurchase(convertedAmount = BigDecimal("-1.00"))
-            }
-
-        assertEquals("Converted amount must be zero or positive", error.message)
     }
 
     @Test
@@ -212,17 +170,8 @@ class PurchaseTest {
         id: Long = 1L,
         description: String = "Fuel purchase",
         transactionAmount: BigDecimal = BigDecimal("100.00"),
-        transactionCurrency: TargetCurrency = TargetCurrency("USD"),
+        transactionCurrency: TargetCurrency = TargetCurrency("United-States-Dollar"),
         transactionDate: TransactionDate = TransactionDate(LocalDateTime.of(2026, 1, 1, 10, 30, 45)),
-        targetCurrency: TargetCurrency = TargetCurrency("BRL"),
-        exchangeRate: ExchangeRate =
-            ExchangeRate(
-                rate = BigDecimal("5.000000"),
-                sourceCurrency = TargetCurrency("USD"),
-                targetCurrency = TargetCurrency("BRL"),
-                retrievedAt = Instant.parse("2026-01-01T10:00:00Z"),
-            ),
-        convertedAmount: BigDecimal = BigDecimal("500.00"),
         createdAt: Instant = Instant.parse("2026-01-01T10:31:00Z"),
     ): Purchase =
         Purchase(
@@ -231,9 +180,6 @@ class PurchaseTest {
             transactionAmount = transactionAmount,
             transactionCurrency = transactionCurrency,
             transactionDate = transactionDate,
-            targetCurrency = targetCurrency,
-            exchangeRate = exchangeRate,
-            convertedAmount = convertedAmount,
             createdAt = createdAt,
         )
 }

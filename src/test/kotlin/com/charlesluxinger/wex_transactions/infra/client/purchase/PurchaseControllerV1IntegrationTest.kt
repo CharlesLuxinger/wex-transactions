@@ -19,9 +19,9 @@ class PurchaseControllerV1IntegrationTest : AbstractRestApiIntegrationTest() {
             mapOf(
                 "description" to "Lunch at Restaurant",
                 "transactionAmount" to "abc",
-                "transactionCurrency" to "USD",
+                "transactionCurrency" to "United-States-Dollar",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "BRL",
+                "targetCurrency" to "Brazil-Real",
             )
 
         givenJson()
@@ -43,9 +43,9 @@ class PurchaseControllerV1IntegrationTest : AbstractRestApiIntegrationTest() {
             mapOf(
                 "description" to "Duplicate Purchase Test",
                 "transactionAmount" to "100.00",
-                "transactionCurrency" to "USD",
+                "transactionCurrency" to "United-States-Dollar",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "BRL",
+                "targetCurrency" to "Brazil-Real",
             )
 
         // First POST — expect 201 Created

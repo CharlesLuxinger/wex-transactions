@@ -2,6 +2,15 @@ treasury:
   api:
     base-url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 spring:
   application:
     name: wex-transactions
@@ -50,3 +59,7 @@ resilience4j:
         limit-for-period: 100
         limit-refresh-period: 1s
         timeout-duration: 0
+      treasury-api:
+        limit-for-period: 10
+        limit-refresh-period: 1m
+        timeout-duration: 5s

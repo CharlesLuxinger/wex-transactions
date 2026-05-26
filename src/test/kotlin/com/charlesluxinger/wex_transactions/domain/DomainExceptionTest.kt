@@ -42,17 +42,17 @@ class DomainExceptionTest {
 
     @Test
     fun `RateUnavailableException should contain from and to currencies`() {
-        val exception = RateUnavailableException("USD", "BRL")
+        val exception = RateUnavailableException("United-States-Dollar", "Brazil-Real")
 
-        assertEquals("USD", exception.from)
-        assertEquals("BRL", exception.to)
+        assertEquals("United-States-Dollar", exception.from)
+        assertEquals("Brazil-Real", exception.to)
     }
 
     @Test
     fun `RateUnavailableException message should include both currencies`() {
-        val exception = RateUnavailableException("USD", "BRL")
+        val exception = RateUnavailableException("United-States-Dollar", "Brazil-Real")
 
-        assertEquals("Exchange rate unavailable: USD → BRL", exception.message)
+        assertEquals("Exchange rate unavailable: United-States-Dollar → Brazil-Real", exception.message)
     }
 
     @Test
@@ -88,7 +88,7 @@ class DomainExceptionTest {
         val exceptions =
             listOf(
                 PurchaseNotFoundException(1),
-                RateUnavailableException("USD", "BRL"),
+                RateUnavailableException("United-States-Dollar", "Brazil-Real"),
                 RateStaleException(5),
                 InvalidCurrencyException("BAD"),
             )

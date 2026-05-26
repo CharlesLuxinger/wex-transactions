@@ -30,9 +30,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             mapOf(
                 "description" to "Lunch at Restaurant",
                 "transactionAmount" to 15.50,
-                "transactionCurrency" to "USD",
+                "transactionCurrency" to "United-States-Dollar",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "EUR",
+                "targetCurrency" to "Brazil-Real",
             )
 
         givenJson()
@@ -44,11 +44,8 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .body("id", notNullValue())
             .body("description", hamcrestEqualTo("Lunch at Restaurant"))
             .body("transactionAmount", hamcrestEqualTo(15.50f))
-            .body("transactionCurrency", hamcrestEqualTo("USD"))
+            .body("transactionCurrency", hamcrestEqualTo("United-States-Dollar"))
             .body("transactionDate", hamcrestEqualTo("2026-05-23T12:00:00Z"))
-            .body("targetCurrency", hamcrestEqualTo("EUR"))
-            .body("exchangeRate", hamcrestEqualTo(1.0f))
-            .body("convertedAmount", hamcrestEqualTo(15.50f))
     }
 
     @Test
@@ -60,9 +57,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             mapOf(
                 "description" to "Lunch at Restaurant",
                 "transactionAmount" to 15.50,
-                "transactionCurrency" to "USD",
+                "transactionCurrency" to "United-States-Dollar",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "EUR",
+                "targetCurrency" to "Brazil-Real",
             )
 
         val firstId =
@@ -75,11 +72,8 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
                 .body("id", notNullValue())
                 .body("description", hamcrestEqualTo("Lunch at Restaurant"))
                 .body("transactionAmount", hamcrestEqualTo(15.50f))
-                .body("transactionCurrency", hamcrestEqualTo("USD"))
+                .body("transactionCurrency", hamcrestEqualTo("United-States-Dollar"))
                 .body("transactionDate", hamcrestEqualTo("2026-05-23T12:00:00Z"))
-                .body("targetCurrency", hamcrestEqualTo("EUR"))
-                .body("exchangeRate", hamcrestEqualTo(1.0f))
-                .body("convertedAmount", hamcrestEqualTo(15.50f))
                 .extract()
                 .path<Int>("id")
                 .toLong()
@@ -94,11 +88,8 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
                 .body("id", notNullValue())
                 .body("description", hamcrestEqualTo("Lunch at Restaurant"))
                 .body("transactionAmount", hamcrestEqualTo(15.50f))
-                .body("transactionCurrency", hamcrestEqualTo("USD"))
+                .body("transactionCurrency", hamcrestEqualTo("United-States-Dollar"))
                 .body("transactionDate", hamcrestEqualTo("2026-05-23T12:00:00Z"))
-                .body("targetCurrency", hamcrestEqualTo("EUR"))
-                .body("exchangeRate", hamcrestEqualTo(1.0f))
-                .body("convertedAmount", hamcrestEqualTo(15.50f))
                 .extract()
                 .path<Int>("id")
                 .toLong()
@@ -115,9 +106,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             mapOf(
                 "description" to "   ",
                 "transactionAmount" to 15.50,
-                "transactionCurrency" to "USD",
+                "transactionCurrency" to "United-States-Dollar",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "EUR",
+                "targetCurrency" to "Brazil-Real",
             )
 
         givenJson()
@@ -138,9 +129,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             mapOf(
                 "description" to "A".repeat(51),
                 "transactionAmount" to 15.50,
-                "transactionCurrency" to "USD",
+                "transactionCurrency" to "United-States-Dollar",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "EUR",
+                "targetCurrency" to "Brazil-Real",
             )
 
         givenJson()
@@ -155,15 +146,60 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
     }
 
     @Test
+    @DisplayName("Should fail when transaction amount is zero")
+    fun `should fail when transaction amount is zero`() {
+        val payload =
+            mapOf(
+                "description" to "Book",
+                "transactionAmount" to 0,
+                "transactionCurrency" to "United-States-Dollar",
+                "transactionDate" to "2026-05-23T12:00:00Z",
+                "targetCurrency" to "Brazil-Real",
+            )
+
+        givenJson()
+            .body(payload)
+            .`when`()
+            .post("/api/v1/purchases")
+            .then()
+            .statusCode(400)
+            .body("title", hamcrestEqualTo("Bad Request"))
+            .body("detail", hamcrestEqualTo("Transaction amount must be positive"))
+    }
+
+    @Test
+    @DisplayName("Should round excessive decimal precision to nearest cent on store")
+    fun `should round excessive decimal precision to nearest cent on store`() {
+        stubTreasuryRate("1.00")
+
+        val payload =
+            mapOf(
+                "description" to "Precision",
+                "transactionAmount" to 10.125,
+                "transactionCurrency" to "United-States-Dollar",
+                "transactionDate" to "2026-05-23T12:00:00Z",
+                "targetCurrency" to "Brazil-Real",
+            )
+
+        givenJson()
+            .body(payload)
+            .`when`()
+            .post("/api/v1/purchases")
+            .then()
+            .statusCode(201)
+            .body("transactionAmount", hamcrestEqualTo(10.13f))
+    }
+
+    @Test
     @DisplayName("Should fail when transaction amount is non-positive")
     fun `should fail when transaction amount is non-positive`() {
         val payload =
             mapOf(
                 "description" to "Book",
                 "transactionAmount" to -1.00,
-                "transactionCurrency" to "USD",
+                "transactionCurrency" to "United-States-Dollar",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "EUR",
+                "targetCurrency" to "Brazil-Real",
             )
 
         givenJson()
@@ -184,9 +220,9 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             mapOf(
                 "description" to "Book",
                 "transactionAmount" to 10.00,
-                "transactionCurrency" to "USD",
+                "transactionCurrency" to "United-States-Dollar",
                 "transactionDate" to "invalid-date",
-                "targetCurrency" to "EUR",
+                "targetCurrency" to "Brazil-Real",
             )
 
         givenJson()
@@ -200,38 +236,15 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
     }
 
     @Test
-    @DisplayName("Should fail when currency is invalid")
-    fun `should fail when currency is invalid`() {
+    @DisplayName("Should fail when transaction currency is not United-States-Dollar")
+    fun `should fail when transaction currency is not United-States-Dollar`() {
         val payload =
             mapOf(
                 "description" to "Book",
                 "transactionAmount" to 10.00,
-                "transactionCurrency" to "USD",
+                "transactionCurrency" to "Brazil-Real",
                 "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "INVALID",
-            )
-
-        givenJson()
-            .body(payload)
-            .`when`()
-            .post("/api/v1/purchases")
-            .then()
-            .statusCode(400)
-            .body("title", hamcrestEqualTo("Invalid Currency"))
-            .body("detail", hamcrestEqualTo("Invalid currency code"))
-            .body("errors.message", hasItem("Invalid currency code"))
-    }
-
-    @Test
-    @DisplayName("Should fail when transaction currency is not USD")
-    fun `should fail when transaction currency is not USD`() {
-        val payload =
-            mapOf(
-                "description" to "Book",
-                "transactionAmount" to 10.00,
-                "transactionCurrency" to "EUR",
-                "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "BRL",
+                "targetCurrency" to "Brazil-Real",
             )
 
         givenJson()
@@ -241,8 +254,8 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .then()
             .statusCode(400)
             .body("title", hamcrestEqualTo("Bad Request"))
-            .body("detail", hamcrestEqualTo("Transaction currency must be USD"))
-            .body("errors.message", hasItem("Transaction currency must be USD"))
+            .body("detail", hamcrestEqualTo("Transaction currency must be United-States-Dollar"))
+            .body("errors.message", hasItem("Transaction currency must be United-States-Dollar"))
     }
 
     private fun stubTreasuryRate(rate: String) {

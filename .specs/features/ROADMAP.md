@@ -65,7 +65,7 @@ Exit criteria:
 - Purchase storage acceptance rules are satisfied:
   - description required, <= 50
   - transaction date accepted as ISO-8601 equivalent and normalized canonically
-  - USD amount required, positive, rounded to 2 decimals
+  - United-States-Dollar amount required, positive, rounded to 2 decimals
   - unique `Long` ID returned
 - Minimal business error taxonomy applied for create path only.
 - Guardrails and coverage thresholds remain green.
@@ -94,7 +94,7 @@ Exit criteria:
 - Selected rate date is `<= purchase date`.
 - Eligible rate must be within prior 6 months inclusive from purchase date.
 - If no eligible rate exists, conversion-unavailable business error is returned.
-- Returned data includes required fields (id, description, date, original USD amount, exchange rate used, converted amount).
+- Returned data includes required fields (id, description, date, original United-States-Dollar amount, exchange rate used, converted amount).
 - Converted amount rounded to 2 decimals.
 - Guardrails and coverage thresholds remain green.
 

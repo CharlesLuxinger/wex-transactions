@@ -35,7 +35,7 @@ The following tokens are fixed and must remain verbatim across synced specs/task
 ### F-A Store Purchase
 - REQ-01: `description` is required and max 50 chars.
 - REQ-02: `transactionDate` is required; ISO-8601 equivalent input is accepted and normalized to `yyyy-MM-dd'T'HH:mm:ssXXX`.
-- REQ-03: `purchaseAmount` is required, positive, USD, rounded to 2 decimals.
+- REQ-03: `purchaseAmount` is required, positive, United-States-Dollar, rounded to 2 decimals.
 - REQ-04: System generates and returns unique purchase identifier in `Long` format.
 
 ### F-B Retrieve Converted Purchase
@@ -44,7 +44,7 @@ The following tokens are fixed and must remain verbatim across synced specs/task
 - REQ-07: Eligible historical window is prior 6 months inclusive.
 - REQ-08: If no eligible rate exists, return business error.
 - REQ-09: Converted amount rounded to 2 decimals.
-- REQ-10: Response includes purchase id (`Long`), description, date, original USD amount, exchange rate used, converted amount.
+- REQ-10: Response includes purchase id (`Long`), description, date, original United-States-Dollar amount, exchange rate used, converted amount.
 
 ### F-C Error Taxonomy
 - REQ-11: Error for description length > 50.

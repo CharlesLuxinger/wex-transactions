@@ -1,30 +1,19 @@
 package com.charlesluxinger.wex_transactions.domain.model
 
-import java.util.Currency
-
 class TargetCurrency(
-    code: String,
+    value: String,
 ) {
-    val code: String = code.trim().uppercase()
+    val value: String = value.trim()
 
     init {
-        if (!CODE_REGEX.matches(this.code) || !isIso4217(this.code)) {
-            throw InvalidCurrencyException(this.code)
+        if (this.value.isBlank()) {
+            throw InvalidCurrencyException(this.value)
         }
     }
 
-    override fun equals(other: Any?): Boolean = this === other || (other is TargetCurrency && code == other.code)
+    override fun equals(other: Any?): Boolean = this === other || (other is TargetCurrency && value == other.value)
 
-    override fun hashCode(): Int = code.hashCode()
+    override fun hashCode(): Int = value.hashCode()
 
-    override fun toString(): String = code
-
-    private fun isIso4217(value: String): Boolean =
-        runCatching {
-            Currency.getInstance(value)
-        }.isSuccess
-
-    companion object {
-        private val CODE_REGEX = Regex("^[A-Z]{3}$")
-    }
+    override fun toString(): String = value
 }

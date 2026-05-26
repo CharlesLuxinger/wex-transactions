@@ -116,8 +116,8 @@ class RedisExchangeRateEventAdapterTest {
 
     private fun sampleEvent(): ExchangeRateFetchedEvent =
         ExchangeRateFetchedEvent(
-            sourceCurrency = "USD",
-            targetCurrency = "BRL",
+            sourceCurrency = "United-States-Dollar",
+            targetCurrency = "Brazil-Real",
             rate = BigDecimal("5.25"),
             retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
             rateDate = LocalDate.parse("2026-01-16"),

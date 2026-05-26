@@ -2,7 +2,7 @@
 
 ## TL;DR
 > **Summary**: Execute 30+ fixes across domain, validation, architecture tests, resilience, observability, exception handling, and test coverage based on comprehensive 8-phase code review.
-> **Deliverables**: Updated DECISIONS.md + STRUCTURE.md, DB schema migration (18,6→18,2), USD-only enforcement, architecture test hardening, Resilience4j integration (CB + Bulkhead + RateLimiter), WireMock test infrastructure, unified validation, treasury robustness, exception handling improvements, observability fixes, and 7+ new test scenarios.
+> **Deliverables**: Updated DECISIONS.md + STRUCTURE.md, DB schema migration (18,6→18,2), United-States-Dollar-only enforcement, architecture test hardening, Resilience4j integration (CB + Bulkhead + RateLimiter), WireMock test infrastructure, unified validation, treasury robustness, exception handling improvements, observability fixes, and 7+ new test scenarios.
 > **Effort**: Large
 > **Parallel**: YES — 3 waves
 > **Critical Path**: T2+T3 (Schema+Validation) → T7 (Resilience4j) → T10 (WireMock+StoreUseCase) → T13 (API Mock Replacement); T8 (Treasury) → T11 (Treasury Tests)
@@ -32,7 +32,7 @@ Corrigir 30+ itens da revisão de código, organizados em 3 ondas: (1) Foundatio
 - DECISIONS.md atualizado com ambiguidades resolvidas
 - STRUCTURE.md alinhado com pacote real
 - DB schema DECIMAL(18,2) com migration editada
-- USD-only enforcement em domínio + controller
+- United-States-Dollar-only enforcement em domínio + controller
 - Testes arquiteturais sem passes vacuosos
 - Validação unificada em Bean Validation, controller limpo
 - GlobalExceptionHandler cobrindo FeignException + IllegalStateException + erros multi-campo
@@ -54,7 +54,7 @@ Corrigir 30+ itens da revisão de código, organizados em 3 ondas: (1) Foundatio
 - JaCoCo coverage >= 90% overall, 100% domain
 
 ### Must Have
-- USD-only enforcement no store flow
+- United-States-Dollar-only enforcement no store flow
 - DB schema consistente com scale 2
 - Testes arquiteturais falham quando escopo está vazio
 - Resilience4j configurado e integrado
@@ -81,7 +81,7 @@ Corrigir 30+ itens da revisão de código, organizados em 3 ondas: (1) Foundatio
 ### Parallel Execution Waves
 
 **Wave 1 — Foundation (4 tasks, parallel):**
-T1 (Spec/Docs), T2 (Schema+Scale), T3 (USD+Validation), T4 (Arch Tests)
+T1 (Spec/Docs), T2 (Schema+Scale), T3 (United-States-Dollar+Validation), T4 (Arch Tests)
 
 **Wave 2 — Production Hardening (5 tasks, after Wave 1):**
 T5 (Exception Handling), T6 (Observability), T7 (Resilience4j), T8 (Treasury), T9 (Persistence Guard)
@@ -94,7 +94,7 @@ T10 (WireMock+StoreUseCase), T11 (Treasury+6mo Tests), T12 (Idempotency+422), T1
 |------|-----------|--------|
 | T1 (Spec/Docs) | — | — |
 | T2 (Schema) | — | T7, T8 |
-| T3 (USD+Validation) | — | T5, T7, T10 |
+| T3 (United-States-Dollar+Validation) | — | T5, T7, T10 |
 | T4 (Arch Tests) | — | — |
 | T5 (Exception Handling) | T3 | — |
 | T6 (Observability) | — | — |
@@ -219,12 +219,12 @@ T10 (WireMock+StoreUseCase), T11 (Treasury+6mo Tests), T12 (Idempotency+422), T1
 
   **Commit**: YES | Message: `fix(db): migrate DECIMAL(18,6) to DECIMAL(18,2) and enforce cent-rounding` | Files: `src/main/resources/db/migration/V1__initial_schema.sql`, `src/main/kotlin/.../infra/adapter/persistence/PurchaseJpaEntity.kt`, `src/main/kotlin/.../domain/model/Purchase.kt`, `src/main/kotlin/.../application/service/purchase/StorePurchaseUseCaseImpl.kt`, `src/main/kotlin/.../domain/port/inbound/purchase/model/StorePurchaseRequest.kt`
 
-- [ ] T3. USD-Only Enforcement + Validation Unification
+- [ ] T3. United-States-Dollar-Only Enforcement + Validation Unification
 
   **What to do**:
-  - Item 1 (USD-only):
-    - Em `StorePurchaseRequest.kt`: mudar `@Pattern(regexp = "^[A-Za-z]{3}$")` em `transactionCurrency` para `@Pattern(regexp = "^USD$", message = "Transaction currency must be USD")`
-    - Em `StorePurchaseUseCaseImpl.kt`: após `TargetCurrency(command.transactionCurrency)`, adicionar `require(sourceCurrency.code == "USD") { "Only USD purchases are supported" }`
+  - Item 1 (United-States-Dollar-only):
+    - Em `StorePurchaseRequest.kt`: mudar `@Pattern(regexp = "^[A-Za-z]{3}$")` em `transactionCurrency` para `@Pattern(regexp = "^USD$", message = "Transaction currency must be United-States-Dollar")`
+    - Em `StorePurchaseUseCaseImpl.kt`: após `TargetCurrency(command.transactionCurrency)`, adicionar `require(sourceCurrency.code == "United-States-Dollar") { "Only United-States-Dollar purchases are supported" }`
     - Em `PurchaseControllerV1.kt`: remover a validação manual duplicada (a Bean Validation + use case cuidam)
   - Item 26 (Unify validation):
     - Remover método `validate()` inteiro do `PurchaseControllerV1.kt` (a validação está no DTO via Bean Validation + no use case)
@@ -241,8 +241,8 @@ T10 (WireMock+StoreUseCase), T11 (Treasury+6mo Tests), T12 (Idempotency+422), T1
   **Parallelization**: Can Parallel: YES | Wave 1 | Blocks: T5, T7, T11 | Blocked By: none
 
   **References**:
-  - DTO: `src/main/kotlin/.../domain/port/inbound/purchase/model/StorePurchaseRequest.kt` — currency regex → USD-only
-  - UseCase: `src/main/kotlin/.../application/service/purchase/StorePurchaseUseCaseImpl.kt` — add USD guard
+  - DTO: `src/main/kotlin/.../domain/port/inbound/purchase/model/StorePurchaseRequest.kt` — currency regex → United-States-Dollar-only
+  - UseCase: `src/main/kotlin/.../application/service/purchase/StorePurchaseUseCaseImpl.kt` — add United-States-Dollar guard
   - Controller: `src/main/kotlin/.../infra/client/purchase/PurchaseControllerV1.kt` — remove validate() + clean imports
   - Evidence: `src/test/kotlin/.../infra/client/purchase/PurchaseControllerV1Test.kt` — existing tests should still pass (some may need update for new error message)
 
@@ -253,7 +253,7 @@ T10 (WireMock+StoreUseCase), T11 (Treasury+6mo Tests), T12 (Idempotency+422), T1
 
   **QA Scenarios**:
   ```
-  Scenario: Verify USD-only enforced in DTO
+  Scenario: Verify United-States-Dollar-only enforced in DTO
     Tool: Bash
     Steps: grep for transactionCurrency regex pattern in StorePurchaseRequest.kt
     Expected: @Pattern(regexp = "^USD$")
@@ -266,7 +266,7 @@ T10 (WireMock+StoreUseCase), T11 (Treasury+6mo Tests), T12 (Idempotency+422), T1
     Evidence: .sisyphus/evidence/task-T3-controller-clean.txt
   ```
 
-  **Commit**: YES | Message: `feat(purchase): enforce USD-only purchases and unify validation in Bean Validation` | Files: `src/main/kotlin/.../domain/port/inbound/purchase/model/StorePurchaseRequest.kt`, `src/main/kotlin/.../application/service/purchase/StorePurchaseUseCaseImpl.kt`, `src/main/kotlin/.../infra/client/purchase/PurchaseControllerV1.kt`
+  **Commit**: YES | Message: `feat(purchase): enforce United-States-Dollar-only purchases and unify validation in Bean Validation` | Files: `src/main/kotlin/.../domain/port/inbound/purchase/model/StorePurchaseRequest.kt`, `src/main/kotlin/.../application/service/purchase/StorePurchaseUseCaseImpl.kt`, `src/main/kotlin/.../infra/client/purchase/PurchaseControllerV1.kt`
 
 - [ ] T4. Fix Architecture Tests — Eliminate Vacuous Passes
 
@@ -602,7 +602,7 @@ T10 (WireMock+StoreUseCase), T11 (Treasury+6mo Tests), T12 (Idempotency+422), T1
       - Adicionar teste de sucesso: verificar que `purchaseRepositoryPort.save()` é chamado com Purchase correto
       - Adicionar teste que verifica chamada a `exchangeRateClientPort.fetchRate()`
       - Adicionar teste que verifica cálculo de `convertedAmount`
-      - Adicionar teste com `transactionCurrency != "USD"` que verifica falha (após item 1)
+      - Adicionar teste com `transactionCurrency != "United-States-Dollar"` que verifica falha (após item 1)
     - Criar cenários de teste com Mockito `verify` para port calls
 
   **Must NOT do**: Não remover Testcontainers — WireMock é adicional. Não alterar produção.
@@ -797,7 +797,7 @@ T10 (WireMock+StoreUseCase), T11 (Treasury+6mo Tests), T12 (Idempotency+422), T1
 - [ ] `./gradlew test jacocoTestReport` — todos verdes
 - [ ] JaCoCo coverage >= 90% overall, 100% domain
 - [ ] Nenhum teste arquitetural passa com escopo vazio
-- [ ] USD-only enforcement ativo em store flow
+- [ ] United-States-Dollar-only enforcement ativo em store flow
 - [ ] DB schema DECIMAL(18,2) consistente com domínio scale-2
 - [ ] Resilience4j (CB + Bulkhead + RL) integrado e testado
 - [ ] WireMock substitui mocks nos API tests

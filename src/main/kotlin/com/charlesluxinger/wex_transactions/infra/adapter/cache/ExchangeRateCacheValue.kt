@@ -22,8 +22,8 @@ data class ExchangeRateCacheValue(
         fun fromDomain(exchangeRate: ExchangeRate): ExchangeRateCacheValue =
             ExchangeRateCacheValue(
                 rate = exchangeRate.rate.toPlainString(),
-                sourceCurrency = exchangeRate.sourceCurrency.code,
-                targetCurrency = exchangeRate.targetCurrency.code,
+                sourceCurrency = exchangeRate.sourceCurrency.value,
+                targetCurrency = exchangeRate.targetCurrency.value,
                 retrievedAt = exchangeRate.retrievedAt.toString(),
             )
     }

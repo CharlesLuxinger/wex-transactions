@@ -1,6 +1,5 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.persistence
 
-import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
@@ -26,16 +25,10 @@ class PurchaseJpaEntity(
     var description: String,
     @Column(name = "transaction_amount", nullable = false, precision = 18, scale = 2)
     var transactionAmount: BigDecimal,
-    @Column(name = "transaction_currency", nullable = false, length = 3)
+    @Column(name = "transaction_currency", nullable = false, length = 50)
     var transactionCurrency: String,
     @Column(name = "transaction_date", nullable = false)
     var transactionDate: Instant,
-    @Column(name = "target_currency", nullable = false, length = 3)
-    var targetCurrency: String,
-    @Column(name = "exchange_rate", nullable = false, precision = 18, scale = 2)
-    var exchangeRate: BigDecimal,
-    @Column(name = "converted_amount", nullable = false, precision = 18, scale = 2)
-    var convertedAmount: BigDecimal,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,
 ) {
@@ -46,15 +39,6 @@ class PurchaseJpaEntity(
             transactionAmount = transactionAmount,
             transactionCurrency = TargetCurrency(transactionCurrency),
             transactionDate = TransactionDate(LocalDateTime.ofInstant(transactionDate, ZoneOffset.UTC)),
-            targetCurrency = TargetCurrency(targetCurrency),
-            exchangeRate =
-                ExchangeRate(
-                    rate = exchangeRate,
-                    sourceCurrency = TargetCurrency(transactionCurrency),
-                    targetCurrency = TargetCurrency(targetCurrency),
-                    retrievedAt = createdAt,
-                ),
-            convertedAmount = convertedAmount,
             createdAt = createdAt,
         )
 
@@ -63,14 +47,11 @@ class PurchaseJpaEntity(
             PurchaseJpaEntity(
                 description = purchase.description,
                 transactionAmount = purchase.transactionAmount,
-                transactionCurrency = purchase.transactionCurrency.code,
+                transactionCurrency = purchase.transactionCurrency.value,
                 transactionDate =
                     purchase.transactionDate.value
                         .atOffset(ZoneOffset.UTC)
                         .toInstant(),
-                targetCurrency = purchase.targetCurrency.code,
-                exchangeRate = purchase.exchangeRate.rate,
-                convertedAmount = purchase.convertedAmount,
                 createdAt = purchase.createdAt,
             )
     }

@@ -76,7 +76,7 @@ class RedisExchangeRateEventAdapterTraceIdTest {
         val record = captor.value
         val traceId = record[streamProperties.traceIdField]
         assertNotNull(traceId)
-        assertTrue(traceId!!.length == 32)
+        assertTrue(traceId.length == 32)
         assertTrue(traceId.matches(Regex("[a-f0-9]+")))
     }
 
@@ -94,14 +94,14 @@ class RedisExchangeRateEventAdapterTraceIdTest {
         val record = captor.value
         val payload = record[streamProperties.payloadField]
         assertNotNull(payload)
-        assertTrue(payload!!.contains("USD"))
-        assertTrue(payload.contains("BRL"))
+        assertTrue(payload.contains("United-States-Dollar"))
+        assertTrue(payload.contains("Brazil-Real"))
     }
 
     private fun sampleEvent(): ExchangeRateFetchedEvent =
         ExchangeRateFetchedEvent(
-            sourceCurrency = "USD",
-            targetCurrency = "BRL",
+            sourceCurrency = "United-States-Dollar",
+            targetCurrency = "Brazil-Real",
             rate = BigDecimal("5.12"),
             retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
             rateDate = LocalDate.parse("2026-01-16"),

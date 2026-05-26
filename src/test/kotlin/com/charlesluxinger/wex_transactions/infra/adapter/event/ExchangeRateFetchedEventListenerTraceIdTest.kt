@@ -106,8 +106,8 @@ class ExchangeRateFetchedEventListenerTraceIdTest {
     private fun serializedEvent(): String {
         val event =
             ExchangeRateFetchedEvent(
-                sourceCurrency = "USD",
-                targetCurrency = "BRL",
+                sourceCurrency = "United-States-Dollar",
+                targetCurrency = "Brazil-Real",
                 rate = BigDecimal("5.12"),
                 retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
                 rateDate = LocalDate.parse("2026-01-16"),

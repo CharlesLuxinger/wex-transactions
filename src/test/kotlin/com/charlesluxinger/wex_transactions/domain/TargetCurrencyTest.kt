@@ -12,48 +12,48 @@ import kotlin.test.assertTrue
 
 class TargetCurrencyTest {
     @Test
-    fun `should create with valid ISO-4217 code`() {
-        val currency = TargetCurrency("USD")
+    fun `should create with treasury descriptor Canada-Dollar`() {
+        val currency = TargetCurrency("Canada-Dollar")
 
-        assertEquals("USD", currency.code)
+        assertEquals("Canada-Dollar", currency.value)
     }
 
     @Test
-    fun `should validate 3-character code length`() {
+    fun `should create with treasury descriptor Mexico-Peso`() {
+        val currency = TargetCurrency("Mexico-Peso")
+
+        assertEquals("Mexico-Peso", currency.value)
+    }
+
+    @Test
+    fun `should reject blank code`() {
         val error =
             assertFailsWith<InvalidCurrencyException> {
-                TargetCurrency("US")
+                TargetCurrency("")
             }
 
-        assertEquals("US", error.code)
+        assertEquals("", error.code)
     }
 
     @Test
-    fun `should normalize to uppercase`() {
-        val currency = TargetCurrency("eur")
-
-        assertEquals("EUR", currency.code)
+    fun `should reject whitespace code`() {
+        assertFailsWith<InvalidCurrencyException> {
+            TargetCurrency("   ")
+        }
     }
 
     @Test
     fun `should trim surrounding spaces`() {
-        val currency = TargetCurrency("  usd  ")
+        val currency = TargetCurrency("  Canada-Dollar  ")
 
-        assertEquals("USD", currency.code)
+        assertEquals("Canada-Dollar", currency.value)
     }
 
     @Test
-    fun `should reject codes shorter than 3 chars`() {
-        assertFailsWith<InvalidCurrencyException> {
-            TargetCurrency("AB")
-        }
-    }
+    fun `should preserve original casing`() {
+        val currency = TargetCurrency("canada-Dollar")
 
-    @Test
-    fun `should reject codes longer than 3 chars`() {
-        assertFailsWith<InvalidCurrencyException> {
-            TargetCurrency("USDD")
-        }
+        assertEquals("canada-Dollar", currency.value)
     }
 
     @Test
@@ -63,57 +63,47 @@ class TargetCurrencyTest {
 
     @Test
     fun `equals should match on code`() {
-        val first = TargetCurrency("USD")
-        val second = TargetCurrency("usd")
+        val first = TargetCurrency("Canada-Dollar")
+        val second = TargetCurrency("Canada-Dollar")
 
         assertEquals(first, second)
     }
 
     @Test
     fun `hashCode should depend on code`() {
-        val first = TargetCurrency("USD")
-        val second = TargetCurrency("usd")
+        val first = TargetCurrency("Canada-Dollar")
+        val second = TargetCurrency("Canada-Dollar")
 
         assertEquals(first.hashCode(), second.hashCode())
     }
 
     @Test
-    fun `USD and USD should be equal`() {
-        assertEquals(TargetCurrency("USD"), TargetCurrency("USD"))
+    fun `Canada-Dollar and Canada-Dollar should be equal`() {
+        assertEquals(TargetCurrency("Canada-Dollar"), TargetCurrency("Canada-Dollar"))
     }
 
     @Test
-    fun `USD and EUR should not be equal`() {
-        assertNotEquals(TargetCurrency("USD"), TargetCurrency("EUR"))
+    fun `Canada-Dollar and Mexico-Peso should not be equal`() {
+        assertNotEquals(TargetCurrency("Canada-Dollar"), TargetCurrency("Mexico-Peso"))
     }
 
     @Test
-    fun `should accept common currencies`() {
-        val accepted = listOf("USD", "EUR", "GBP", "JPY")
+    fun `should accept common treasury descriptors`() {
+        val accepted = listOf("Canada-Dollar", "Mexico-Peso", "Brazil-Real", "Japan-Yen")
 
         accepted.forEach { code ->
-            assertEquals(code, TargetCurrency(code).code)
+            assertEquals(code, TargetCurrency(code).value)
         }
     }
 
     @Test
-    fun `should reject non existent currency codes`() {
-        val error =
-            assertFailsWith<InvalidCurrencyException> {
-                TargetCurrency("ZZZ")
-            }
-
-        assertEquals("ZZZ", error.code)
-    }
-
-    @Test
     fun `should not equal different type`() {
-        assertNotEquals<Any>(TargetCurrency("USD"), "not-a-currency")
-        assertNotEquals<Any?>(TargetCurrency("USD"), null)
+        assertNotEquals<Any>(TargetCurrency("Canada-Dollar"), "not-a-currency")
+        assertNotEquals<Any?>(TargetCurrency("Canada-Dollar"), null)
     }
 
     @Test
     fun `toString should return code`() {
-        assertEquals("USD", TargetCurrency("USD").toString())
+        assertEquals("Canada-Dollar", TargetCurrency("Canada-Dollar").toString())
     }
 }
