@@ -85,6 +85,12 @@ Each section includes:
 - The domain value object `TargetCurrency` handles normalization, converting the input code to uppercase for internal representation.
 - Evidence: `TargetCurrency` domain model implementation.
 
+**RESOLVED: Database-level currency validation**
+- Schema: `transaction_currency VARCHAR(50) NOT NULL`
+- Application-level validation enforces 3-character ISO-4217 format before persistence
+- Future improvement: Add database CHECK constraint `transaction_currency ~ '^[A-Z]{3}$'` for defense-in-depth
+- Rationale: Prevents invalid currency codes from entering system (e.g., via direct SQL inserts)
+
 ---
 
 ## 4) Exchange Rate Precision
@@ -126,11 +132,18 @@ Each section includes:
 - Standardized error payloads reduce ambiguity for client handling and API test assertions.
 
 **RESOLVED: Exact HTTP status mapping per business error category**
-- 400 Bad Request: Validation errors (`IllegalArgumentException` from domain validation, Bean Validation constraint violations).
-- 404 Not Found: `PurchaseNotFoundException` (purchase ID not found).
-- 422 Unprocessable Entity: `RateUnavailableException` (no eligible exchange rate in 6-month window), `IllegalStateException` (rate fetch failure).
-- 500 Internal Server Error: Unhandled infrastructure errors (generic `Exception` handler — no stack trace leaked).
-- 503 Service Unavailable: `FeignException` (Treasury API unavailable).
+- **400 Bad Request**:
+  - Missing `X-Idempotency-Key` header (required for POST /api/v1/purchases)
+  - Invalid `X-Idempotency-Key` header (not a valid UUID)
+  - Invalid description length (>50 characters)
+  - Invalid transaction date format (non-ISO-8601 input or non-normalizable value)
+  - Invalid purchase amount (missing, non-numeric, zero, or negative)
+- **404 Not Found**: `PurchaseNotFoundException` (purchase ID not found on GET).
+- **422 Unprocessable Entity**:
+  - `RateUnavailableException` (no eligible exchange rate in 6-month window)
+  - `IllegalStateException` (rate fetch failure after all retries)
+- **500 Internal Server Error**: Unhandled infrastructure errors (generic `Exception` handler — no stack trace leaked).
+- **503 Service Unavailable**: `FeignException` (Treasury API unavailable after circuit breaker opens).
 - Evidence: `GlobalExceptionHandler` implementation (updated with FeignException, IllegalStateException, generic Exception handlers).
 
 ---
@@ -255,22 +268,58 @@ Each section includes:
 ## 11) Idempotency
 
 **What**
-- **Idempotency is NOT implemented.** Duplicate POST submissions create duplicate purchase records.
-- The same purchase payload sent twice must yield two successful `201 Created` responses with distinct `id` values.
+- **Idempotency is IMPLEMENTED** using a dual-layer strategy for exactly-once semantics.
+- Clients submit `X-Idempotency-Key: {UUID}` header with each POST request.
+- Duplicate POST requests with identical `X-Idempotency-Key` value return the same purchase (idempotent).
+- Duplicate POST requests with different `X-Idempotency-Key` values create separate purchase records.
 
 **Why**
-- No business requirement for idempotency key or deduplication.
-- Current behavior is intentional: each POST creates a new purchase.
-- Future idempotency support would require an idempotency key header.
+- Production systems require idempotency to handle network retries safely.
+- Exactly-once semantics protects against duplicate charges if client retransmits on timeout.
+- Dual-layer strategy combines performance (Redis cache) with safety (database atomic constraint).
+
+**Implementation Strategy**
+
+**Layer 1: Redis Cache (Fast Path, 90-day TTL)**
+- `IdempotencyKeyRedisAdapter` stores mapping: `idempotency_key UUID → purchase_id Long`
+- On POST, application checks Redis first for existing purchase
+- Cache hit: return cached purchase ID immediately (eliminates DB round-trip)
+- Cache miss: proceed to atomic save
+
+**Layer 2: PostgreSQL UNIQUE Constraint (Atomic Fallback)**
+- Schema: `purchases.idempotency_key UUID NOT NULL UNIQUE`
+- On concurrent requests with same key:
+  - First request: acquires UNIQUE constraint lock, saves purchase, populates Redis cache
+  - Second request: UNIQUE constraint violation on insert, fetches existing purchase by key, returns it
+- If Redis is unavailable, system falls back to DB-only enforcement (still safe)
+
+**HTTP Contract**
+- Required header: `X-Idempotency-Key: {valid-UUID}`
+- Missing/invalid header: `400 Bad Request` with Problem Details
+
+**Exactly-Once Guarantee**
+- Per UUID basis: Same UUID always returns same purchase record
+- Concurrent requests with same UUID: Database lock ensures one succeeds, others fetch existing
+- Scope: `PurchaseControllerV1.storePurchase()` endpoint
+- TTL: Redis entries expire after 90 days; older idempotency keys are forgotten (acceptable window)
 
 **Evidence**
-- `PurchaseControllerV1` — no idempotency check, no deduplication logic.
-- `StorePurchaseUseCaseImpl` — always creates a new purchase.
-- `PurchaseControllerV1Test` integration coverage verifies duplicate POST body creates two distinct purchase records.
+- `PurchaseControllerV1` line 30: `@RequestHeader(IDEMPOTENCY_KEY_HEADER_NAME, required = true) idempotencyKey: UUID`
+- `IdempotencyKey.kt`: domain value object (UUID wrapper)
+- `IdempotencyKeyPort.kt`: outbound port (cache abstraction)
+- `IdempotencyKeyRedisAdapter.kt`: Redis implementation with 90-day TTL
+- `storage/PurchaseRepositoryJPAAdapter.kt`: `saveWithIdempotencyKey()` with UNIQUE constraint handling
+- `StorePurchaseUseCaseImpl.kt`: orchestration with dual-layer check
+- `PurchaseControllerV1IntegrationTest`: 6 tests validating idempotent behavior
+  - "POST purchase with different idempotency keys creates different purchases"
+  - "POST duplicate purchase with same idempotency key returns same purchase (idempotent)"
+  - "POST purchase returns 400 when idempotency key is missing"
 
 **Rationale**
-- Adding idempotency without business requirement introduces unnecessary complexity.
-- Documented to prevent incorrect assumptions about idempotent behavior.
+- Idempotency is a production requirement for reliable payment systems
+- Dual-layer strategy balances performance (Redis) with safety (DB atomic constraint)
+- If Redis fails, system is still safe (DB constraint prevents duplicates)
+- 90-day cache TTL is configurable and aligns with typical transaction audit windows
 
 ---
 
