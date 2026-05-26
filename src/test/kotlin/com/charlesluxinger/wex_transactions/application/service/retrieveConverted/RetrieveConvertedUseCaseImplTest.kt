@@ -174,7 +174,9 @@ class RetrieveConvertedUseCaseImplTest {
 
         assertEquals(BigDecimal("5.45"), response.exchangeRateUsed)
         assertEquals(BigDecimal("545.00"), response.convertedAmount)
-        verify(exchangeRateCachePort).getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"))
+        verify(
+            exchangeRateCachePort,
+        ).getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"))
         verifyNoInteractions(exchangeRateEventPort)
 
         val fallbackWarningLog =
@@ -207,7 +209,9 @@ class RetrieveConvertedUseCaseImplTest {
                 purchase.transactionDate.value.toLocalDate(),
             ),
         ).thenThrow(treasuryFailure)
-        `when`(exchangeRateCachePort.getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"))).thenReturn(null)
+        `when`(
+            exchangeRateCachePort.getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real")),
+        ).thenReturn(null)
 
         val thrown =
             assertThrows(RuntimeException::class.java) {
@@ -215,7 +219,9 @@ class RetrieveConvertedUseCaseImplTest {
             }
 
         assertSame(treasuryFailure, thrown)
-        verify(exchangeRateCachePort).getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"))
+        verify(
+            exchangeRateCachePort,
+        ).getLatestRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"))
     }
 
     @Test
@@ -338,11 +344,17 @@ class RetrieveConvertedUseCaseImplTest {
 
         `when`(purchaseRepositoryPort.findById(5L)).thenReturn(purchase)
         `when`(
-            exchangeRateCachePort.getRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), rateDate),
+            exchangeRateCachePort.getRate(
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+                rateDate,
+            ),
         ).thenReturn(sampleRate("5.10"))
 
         useCase.retrieveConverted(query)
 
-        verify(exchangeRateCachePort).getRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), rateDate)
+        verify(
+            exchangeRateCachePort,
+        ).getRate(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), rateDate)
     }
 }

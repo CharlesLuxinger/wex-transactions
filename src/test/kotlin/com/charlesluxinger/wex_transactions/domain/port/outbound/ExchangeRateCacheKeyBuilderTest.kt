@@ -39,7 +39,11 @@ class ExchangeRateCacheKeyBuilderTest {
 
     @Test
     fun `buildPairPrefix uses exchangeRate source target prefix format`() {
-        val keyPrefix = ExchangeRateCacheKeyBuilder.buildPairPrefix(TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"))
+        val keyPrefix =
+            ExchangeRateCacheKeyBuilder.buildPairPrefix(
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+            )
 
         assertEquals("exchangeRate:United-States-Dollar:Brazil-Real:", keyPrefix)
     }

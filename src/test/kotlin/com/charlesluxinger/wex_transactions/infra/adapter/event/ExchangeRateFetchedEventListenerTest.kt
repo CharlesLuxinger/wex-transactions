@@ -90,9 +90,7 @@ class ExchangeRateFetchedEventListenerTest {
                     targetCurrency: TargetCurrency,
                     rateDate: LocalDate,
                     rate: ExchangeRate,
-                ) {
-                    throw IOException("cache unavailable")
-                }
+                ): Unit = throw IOException("cache unavailable")
 
                 override fun getLatestRate(
                     sourceCurrency: TargetCurrency,
@@ -168,7 +166,9 @@ class ExchangeRateFetchedEventListenerTest {
         )
     }
 
-    private fun createListener(cachePort: ExchangeRateCachePort = exchangeRateCachePort): ExchangeRateFetchedEventListener {
+    private fun createListener(
+        cachePort: ExchangeRateCachePort = exchangeRateCachePort,
+    ): ExchangeRateFetchedEventListener {
         `when`(stringRedisTemplate.opsForStream<String, String>()).thenReturn(streamOperations)
         return ExchangeRateFetchedEventListener(
             exchangeRateCachePort = cachePort,

@@ -39,7 +39,13 @@ class PurchaseTest {
     @Test
     fun `should accept BigDecimal amounts`() {
         val amount = BigDecimal("1234567890.12")
-        val rate = ExchangeRate(BigDecimal("1.234567"), TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), Instant.now())
+        val rate =
+            ExchangeRate(
+                BigDecimal("1.234567"),
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+                Instant.now(),
+            )
         val converted = amount.multiply(rate.rate).toMonetaryScale()
 
         val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
@@ -68,7 +74,13 @@ class PurchaseTest {
 
     @Test
     fun `should store exchangeRate and convertedAmount`() {
-        val rate = ExchangeRate(BigDecimal("5.432100"), TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), Instant.now())
+        val rate =
+            ExchangeRate(
+                BigDecimal("5.432100"),
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+                Instant.now(),
+            )
         val converted = BigDecimal("543.21")
 
         val purchase = samplePurchase(exchangeRate = rate, convertedAmount = converted)
@@ -127,7 +139,13 @@ class PurchaseTest {
     @Test
     fun `convertedAmount should be calculable from rate and original amount`() {
         val amount = BigDecimal("10.00")
-        val rate = ExchangeRate(BigDecimal("5.250000"), TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), Instant.now())
+        val rate =
+            ExchangeRate(
+                BigDecimal("5.250000"),
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+                Instant.now(),
+            )
         val converted = amount.multiply(rate.rate).toMonetaryScale()
 
         val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
@@ -148,7 +166,13 @@ class PurchaseTest {
     @Test
     fun `should handle very large amounts precision`() {
         val amount = BigDecimal("999999999999.99")
-        val rate = ExchangeRate(BigDecimal("9.999999"), TargetCurrency("United-States-Dollar"), TargetCurrency("Brazil-Real"), Instant.now())
+        val rate =
+            ExchangeRate(
+                BigDecimal("9.999999"),
+                TargetCurrency("United-States-Dollar"),
+                TargetCurrency("Brazil-Real"),
+                Instant.now(),
+            )
         val converted = amount.multiply(rate.rate).toMonetaryScale()
 
         val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)

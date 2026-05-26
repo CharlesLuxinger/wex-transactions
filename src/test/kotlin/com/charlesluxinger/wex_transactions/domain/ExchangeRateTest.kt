@@ -22,7 +22,8 @@ class ExchangeRateTest {
 
     @Test
     fun `should store source and target currencies`() {
-        val exchangeRate = sampleRate(source = TargetCurrency("United-States-Dollar"), target = TargetCurrency("Brazil-Real"))
+        val exchangeRate =
+            sampleRate(source = TargetCurrency("United-States-Dollar"), target = TargetCurrency("Brazil-Real"))
 
         assertEquals(TargetCurrency("United-States-Dollar"), exchangeRate.sourceCurrency)
         assertEquals(TargetCurrency("Brazil-Real"), exchangeRate.targetCurrency)
@@ -108,7 +109,11 @@ class ExchangeRateTest {
     @Test
     fun `should handle same source and target currency with one rate`() {
         val exchangeRate =
-            sampleRate(rate = BigDecimal("1.000000"), source = TargetCurrency("United-States-Dollar"), target = TargetCurrency("United-States-Dollar"))
+            sampleRate(
+                rate = BigDecimal("1.000000"),
+                source = TargetCurrency("United-States-Dollar"),
+                target = TargetCurrency("United-States-Dollar"),
+            )
 
         assertEquals(TargetCurrency("United-States-Dollar"), exchangeRate.sourceCurrency)
         assertEquals(TargetCurrency("United-States-Dollar"), exchangeRate.targetCurrency)
@@ -140,7 +145,11 @@ class ExchangeRateTest {
     @Test
     fun `toString should include pair and rate`() {
         val exchangeRate =
-            sampleRate(rate = BigDecimal("5.250000"), source = TargetCurrency("United-States-Dollar"), target = TargetCurrency("Brazil-Real"))
+            sampleRate(
+                rate = BigDecimal("5.250000"),
+                source = TargetCurrency("United-States-Dollar"),
+                target = TargetCurrency("Brazil-Real"),
+            )
 
         assertEquals("United-States-Dollar/Brazil-Real=5.25", exchangeRate.toString())
     }
