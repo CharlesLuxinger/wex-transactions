@@ -127,7 +127,7 @@ class RetrieveConvertedUseCaseImplTest {
                 targetCurrency = "BRL",
                 rate = BigDecimal("5.25"),
                 retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
-                rateDate = purchase.transactionDate.value.toLocalDate(),
+                rateDate = LocalDate.parse("2026-01-15"),
             ),
         )
         verify(exchangeRateCachePort, never()).saveRate(
@@ -165,7 +165,7 @@ class RetrieveConvertedUseCaseImplTest {
                 targetCurrency = "BRL",
                 rate = BigDecimal("5.25"),
                 retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
-                rateDate = purchase.transactionDate.value.toLocalDate(),
+                rateDate = LocalDate.parse("2026-01-15"),
             )
         doThrow(RuntimeException("publish failed")).`when`(exchangeRateEventPort).publish(fetchedEvent)
         MDC.put("traceId", "trace-abc-123")

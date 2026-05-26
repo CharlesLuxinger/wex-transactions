@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Service
 class RetrieveConvertedUseCaseImpl(
@@ -81,7 +82,7 @@ class RetrieveConvertedUseCaseImpl(
                     targetCurrency = rate.targetCurrency.code,
                     rate = rate.rate,
                     retrievedAt = rate.retrievedAt,
-                    rateDate = purchase.transactionDate.value.toLocalDate(),
+                    rateDate = rate.retrievedAt.atOffset(ZoneOffset.UTC).toLocalDate(),
                 ),
             )
         } catch (ex: Exception) {
@@ -92,7 +93,7 @@ class RetrieveConvertedUseCaseImpl(
                 purchase.id,
                 rate.sourceCurrency.code,
                 rate.targetCurrency.code,
-                purchase.transactionDate.value.toLocalDate(),
+                rate.retrievedAt.atOffset(ZoneOffset.UTC).toLocalDate(),
                 ex.message,
                 ex,
             )
