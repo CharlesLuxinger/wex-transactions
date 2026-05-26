@@ -4,6 +4,7 @@ import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTes
 import com.charlesluxinger.wex_transactions.config.RestAssuredRequestSupport
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCacheKeyBuilder
+import com.charlesluxinger.wex_transactions.infra.filter.IdempotencyKeyFilter.Companion.IDEMPOTENCY_KEY_HEADER_NAME
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
@@ -11,6 +12,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.equalTo as wireMockEqualT
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import io.restassured.http.ContentType
+import java.util.UUID
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -54,8 +56,9 @@ class RetrieveConvertedRateLimiterIntegrationTest :
             .body("title", equalTo("Conversion Unavailable"))
     }
 
-    private fun createPurchase(transactionDate: String): Long =
-        givenJson()
+    private fun createPurchase(transactionDate: String): Long {
+        return givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, UUID.randomUUID().toString())
             .body(
                 mapOf(
                     "description" to "Rate limiter purchase",
@@ -71,6 +74,7 @@ class RetrieveConvertedRateLimiterIntegrationTest :
             .extract()
             .path<Int>("id")
             .toLong()
+    }
 
     private fun clearPairCache() {
         val pairPrefix =

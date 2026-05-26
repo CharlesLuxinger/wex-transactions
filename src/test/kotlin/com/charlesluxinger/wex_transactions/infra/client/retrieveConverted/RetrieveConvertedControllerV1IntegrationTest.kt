@@ -2,6 +2,7 @@ package com.charlesluxinger.wex_transactions.infra.client.retrieveConverted
 
 import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTest
 import com.charlesluxinger.wex_transactions.config.RestAssuredRequestSupport
+import com.charlesluxinger.wex_transactions.infra.filter.IdempotencyKeyFilter.Companion.IDEMPOTENCY_KEY_HEADER_NAME
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
@@ -25,6 +26,7 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import java.math.BigDecimal
 import java.time.Duration
+import java.util.UUID.randomUUID
 
 class RetrieveConvertedControllerV1IntegrationTest :
     AbstractRestApiIntegrationTest(),
@@ -391,8 +393,9 @@ class RetrieveConvertedControllerV1IntegrationTest :
         targetCurrency: String,
         transactionDate: String,
         amount: BigDecimal = BigDecimal("100.00"),
-    ): Long =
-        givenJson()
+    ): Long {
+        return givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, randomUUID().toString())
             .body(
                 mapOf(
                     "description" to "Lunch at Restaurant",
@@ -408,6 +411,7 @@ class RetrieveConvertedControllerV1IntegrationTest :
             .extract()
             .path<Int>("id")
             .toLong()
+    }
 
     private fun stubDefaultTreasuryRate(rate: String) {
         server.stubFor(

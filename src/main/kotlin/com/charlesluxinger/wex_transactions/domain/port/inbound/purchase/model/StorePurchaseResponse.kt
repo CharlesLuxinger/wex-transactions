@@ -1,5 +1,6 @@
 package com.charlesluxinger.wex_transactions.domain.port.inbound.purchase.model
 
+import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -23,4 +24,16 @@ data class StorePurchaseResponse(
     val transactionDate: String,
     @field:NotNull(message = "Created at must not be null")
     val createdAt: Instant,
-)
+) {
+    companion object {
+        fun fromDomain(purchase: Purchase) =
+            StorePurchaseResponse(
+                id = purchase.id,
+                description = purchase.description,
+                transactionAmount = purchase.transactionAmount,
+                transactionCurrency = purchase.transactionCurrency.value,
+                transactionDate = purchase.transactionDate.toCanonicalString(),
+                createdAt = purchase.createdAt,
+            )
+    }
+}

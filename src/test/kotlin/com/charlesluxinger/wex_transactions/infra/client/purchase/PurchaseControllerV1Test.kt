@@ -1,6 +1,7 @@
 package com.charlesluxinger.wex_transactions.infra.client.purchase
 
 import com.charlesluxinger.wex_transactions.config.AbstractRestApiIntegrationTest
+import com.charlesluxinger.wex_transactions.infra.filter.IdempotencyKeyFilter.Companion.IDEMPOTENCY_KEY_HEADER_NAME
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
@@ -36,6 +37,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             )
 
         givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440100")
             .body(payload)
             .`when`()
             .post("/api/v1/purchases")
@@ -64,6 +66,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
 
         val firstId =
             givenJson()
+                .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440101")
                 .body(payload)
                 .`when`()
                 .post("/api/v1/purchases")
@@ -80,6 +83,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
 
         val secondId =
             givenJson()
+                .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440102")
                 .body(payload)
                 .`when`()
                 .post("/api/v1/purchases")
@@ -112,6 +116,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             )
 
         givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440103")
             .body(payload)
             .`when`()
             .post("/api/v1/purchases")
@@ -135,6 +140,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             )
 
         givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440104")
             .body(payload)
             .`when`()
             .post("/api/v1/purchases")
@@ -158,6 +164,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             )
 
         givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440105")
             .body(payload)
             .`when`()
             .post("/api/v1/purchases")
@@ -182,6 +189,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             )
 
         givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440106")
             .body(payload)
             .`when`()
             .post("/api/v1/purchases")
@@ -203,6 +211,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             )
 
         givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440107")
             .body(payload)
             .`when`()
             .post("/api/v1/purchases")
@@ -226,6 +235,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             )
 
         givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440108")
             .body(payload)
             .`when`()
             .post("/api/v1/purchases")
@@ -248,6 +258,7 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             )
 
         givenJson()
+            .header(IDEMPOTENCY_KEY_HEADER_NAME, "550e8400-e29b-41d4-a716-446655440109")
             .body(payload)
             .`when`()
             .post("/api/v1/purchases")

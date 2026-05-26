@@ -96,9 +96,13 @@ Expected result: services stop and local volumes are removed.
 ## 7) API Endpoints
 
 ### Store a Purchase
+
+**Required:** `X-Idempotency-Key` header with valid UUID format.
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/purchases \
   -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000" \
   -d '{
     "description": "Laptop charger",
     "transactionAmount": 49.99,
@@ -117,6 +121,11 @@ Expected response (HTTP 201):
   "transactionDate": "2025-05-22T12:00:00Z",
   "createdAt": "2025-05-22T10:30:00Z"
 }
+```
+
+Response headers include:
+```
+X-Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
 ```
 
 ### Retrieve Converted Purchase
