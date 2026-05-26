@@ -7,15 +7,34 @@ import java.time.LocalDate
 
 class ExchangeRateCacheKeyBuilderTest {
     @Test
-    fun `buildCacheKey uses exchangeRate source target format`() {
+    fun `buildCacheKey uses exchangeRate source target date format`() {
         val key =
             ExchangeRateCacheKeyBuilder.buildCacheKey(
                 TargetCurrency("USD"),
-                TargetCurrency("BRL"),
-                LocalDate.parse("2026-01-16"),
+                TargetCurrency("Canada-Dollar"),
+                LocalDate.of(2024, 1, 15),
             )
 
-        assertEquals("exchangeRate:USD:BRL:2026-01-16", key)
+        assertEquals("exchangeRate:USD:Canada-Dollar:2024-01-15", key)
+    }
+
+    @Test
+    fun `buildCacheKey creates distinct keys for distinct dates`() {
+        val olderDateKey =
+            ExchangeRateCacheKeyBuilder.buildCacheKey(
+                TargetCurrency("USD"),
+                TargetCurrency("Canada-Dollar"),
+                LocalDate.of(2024, 1, 14),
+            )
+        val newerDateKey =
+            ExchangeRateCacheKeyBuilder.buildCacheKey(
+                TargetCurrency("USD"),
+                TargetCurrency("Canada-Dollar"),
+                LocalDate.of(2024, 1, 15),
+            )
+
+        assertEquals("exchangeRate:USD:Canada-Dollar:2024-01-14", olderDateKey)
+        assertEquals("exchangeRate:USD:Canada-Dollar:2024-01-15", newerDateKey)
     }
 
     @Test
