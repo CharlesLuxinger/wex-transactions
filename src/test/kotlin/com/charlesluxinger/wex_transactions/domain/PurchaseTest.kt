@@ -4,8 +4,8 @@ import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
+import com.charlesluxinger.wex_transactions.domain.model.toMonetaryScale
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.Instant
 import java.time.LocalDateTime
 import kotlin.reflect.KMutableProperty
@@ -40,7 +40,7 @@ class PurchaseTest {
     fun `should accept BigDecimal amounts`() {
         val amount = BigDecimal("1234567890.12")
         val rate = ExchangeRate(BigDecimal("1.234567"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
-        val converted = amount.multiply(rate.rate).setScale(2, RoundingMode.HALF_UP)
+        val converted = amount.multiply(rate.rate).toMonetaryScale()
 
         val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
 
@@ -128,7 +128,7 @@ class PurchaseTest {
     fun `convertedAmount should be calculable from rate and original amount`() {
         val amount = BigDecimal("10.00")
         val rate = ExchangeRate(BigDecimal("5.250000"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
-        val converted = amount.multiply(rate.rate).setScale(2, RoundingMode.HALF_UP)
+        val converted = amount.multiply(rate.rate).toMonetaryScale()
 
         val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
 
@@ -149,7 +149,7 @@ class PurchaseTest {
     fun `should handle very large amounts precision`() {
         val amount = BigDecimal("999999999999.99")
         val rate = ExchangeRate(BigDecimal("9.999999"), TargetCurrency("USD"), TargetCurrency("BRL"), Instant.now())
-        val converted = amount.multiply(rate.rate).setScale(2, RoundingMode.HALF_UP)
+        val converted = amount.multiply(rate.rate).toMonetaryScale()
 
         val purchase = samplePurchase(transactionAmount = amount, exchangeRate = rate, convertedAmount = converted)
 

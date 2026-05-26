@@ -152,7 +152,7 @@ Actions:
 Symptoms: startup fails because port binding is denied.
 
 Actions:
-1. Check whether port `8080` or `5432` is already in use.
+1. Check whether port `8080, 5432 or 6379` is already in use.
 2. Stop the conflicting process/service.
 3. Start stack again.
 

@@ -49,7 +49,3 @@ graphify-out/cache/
 
 # Build automation artifacts
 .sisyphus/ralph-loop.local.md
-
-# Generated graphs (except tracked source specs)
-graphify-out/
-!graphify-out/.gitkeep

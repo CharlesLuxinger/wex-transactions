@@ -87,13 +87,13 @@ class ExchangeRateTreasuryAdapter(
         throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
     }
 
-    private companion object {
-        private const val PAGE_SIZE = 10_000
+    companion object {
         private const val DEFAULT_WINDOW_MONTHS = 6L
-        private const val FIELDS = "record_date,country,currency,country_currency_desc,exchange_rate"
-        private const val FILTER_FORMAT = "record_date:lte:%s,record_date:gte:%s"
-        private const val SORT = "-record_date"
         private const val TREASURY_RATES_RESILIENCE = "treasury-rates"
         private val logger = LoggerFactory.getLogger(ExchangeRateTreasuryAdapter::class.java)
+        const val FIELDS = "record_date,country,currency,country_currency_desc,exchange_rate"
+        const val FILTER_FORMAT = "record_date:lte:%s,record_date:gte:%s"
+        const val SORT = "-record_date"
+        const val PAGE_SIZE = 10_000
     }
 }
