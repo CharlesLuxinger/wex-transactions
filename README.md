@@ -63,13 +63,6 @@ docker compose down -v
 ./gradlew test
 ```
 
-## Environment Variables
-| Variable | Default | Description |
-|---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/wex_transactions` | PostgreSQL JDBC URL used by Spring datasource. |
-| `DB_USERNAME` | `postgres` | Database username for datasource authentication. |
-| `DB_PASSWORD` | `postgres` | Database password for datasource authentication. |
-
 ## Troubleshooting
 - **Port conflicts (8080/5432):** Stop the process using the port, then rerun `docker compose up -d`.
 - **Stale volumes/state issues:** Run `docker compose down -v` and start again.
