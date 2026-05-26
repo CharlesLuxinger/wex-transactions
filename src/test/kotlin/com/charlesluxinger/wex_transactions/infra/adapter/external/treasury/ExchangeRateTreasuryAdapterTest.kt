@@ -24,7 +24,7 @@ class ExchangeRateTreasuryAdapterTest {
     private lateinit var adapter: ExchangeRateTreasuryAdapter
 
     private val usd = TargetCurrency("USD")
-    private val brl = TargetCurrency("BRL")
+    private val brazilReal = TargetCurrency("Brazil-Real")
     private val rateDate = LocalDate.parse("2026-05-23")
     private val minBoundary = rateDate.minusMonths(6)
 
@@ -45,7 +45,7 @@ class ExchangeRateTreasuryAdapterTest {
             TreasuryExchangeRateResponse(data = emptyList())
         }
 
-        adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(capturedFilter).contains("record_date:lte:$rateDate")
         assertThat(capturedFilter).contains("record_date:gte:$minBoundary")
@@ -67,12 +67,12 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNotNull
         assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("5.25"))
         assertThat(result.sourceCurrency.code).isEqualTo("USD")
-        assertThat(result.targetCurrency.code).isEqualTo("BRL")
+        assertThat(result.targetCurrency.code).isEqualTo("Brazil-Real")
     }
 
     @Test
@@ -82,7 +82,7 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = null))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNull()
     }
@@ -94,7 +94,7 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = emptyList()))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNull()
     }
@@ -115,7 +115,7 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNull()
     }
@@ -136,7 +136,7 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNotNull
         assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("5.00"))
@@ -158,7 +158,7 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNotNull
         assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("4.80"))
@@ -180,7 +180,7 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNull()
     }
@@ -202,7 +202,7 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNull()
     }
@@ -231,7 +231,7 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = listOf(newestRecord, olderRecord)))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNotNull
         assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("5.90"))
@@ -256,7 +256,7 @@ class ExchangeRateTreasuryAdapterTest {
             TreasuryExchangeRateResponse(data = emptyList())
         }
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         val outOfWindowDate = rateDate.minusMonths(6).minusDays(1)
         assertThat(capturedFilter).contains("record_date:gte:$minBoundary")
@@ -280,7 +280,7 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNull()
     }
@@ -301,8 +301,30 @@ class ExchangeRateTreasuryAdapterTest {
             treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
         ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
 
-        val result = adapter.fetchNearestPriorRate(usd, brl, rateDate)
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
 
         assertThat(result).isNull()
+    }
+
+    @Test
+    @DisplayName("No descriptor mapping is applied")
+    fun `uses treasury country currency description directly`() {
+        val record =
+            TreasuryRateRecord(
+                recordDate = "2026-05-20",
+                country = "Brazil",
+                currency = "Real",
+                countryCurrencyDesc = "Brazil-Real",
+                exchangeRate = "5.25",
+            )
+
+        `when`(
+            treasuryFeignClient.fetchRates(anyString(), anyString(), anyString(), anyInt()),
+        ).thenReturn(TreasuryExchangeRateResponse(data = listOf(record)))
+
+        val result = adapter.fetchNearestPriorRate(usd, brazilReal, rateDate)
+
+        assertThat(result).isNotNull
+        assertThat(result!!.targetCurrency.code).isEqualTo("Brazil-Real")
     }
 }

@@ -35,7 +35,7 @@ class RetrieveConvertedUseCaseImpl(
         val targetCurrency = TargetCurrency(query.targetCurrency)
         val rateDate = purchase.transactionDate.value.toLocalDate()
         val rate =
-            exchangeRateCachePort.getRate(sourceCurrency, targetCurrency)
+            exchangeRateCachePort.getRate(sourceCurrency, targetCurrency, rateDate)
                 ?: fetchClient(sourceCurrency, targetCurrency, rateDate)
                     ?.also { publishToCache(it, purchase) }
 

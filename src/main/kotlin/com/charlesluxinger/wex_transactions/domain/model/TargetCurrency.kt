@@ -1,14 +1,15 @@
 package com.charlesluxinger.wex_transactions.domain.model
 
-import java.util.Currency
+import jakarta.validation.constraints.NotBlank
 
 class TargetCurrency(
+    @field:NotBlank
     code: String,
 ) {
-    val code: String = code.trim().uppercase()
+    val code: String = code.trim()
 
     init {
-        if (!CODE_REGEX.matches(this.code) || !isIso4217(this.code)) {
+        if (this.code.isBlank()) {
             throw InvalidCurrencyException(this.code)
         }
     }
@@ -18,13 +19,4 @@ class TargetCurrency(
     override fun hashCode(): Int = code.hashCode()
 
     override fun toString(): String = code
-
-    private fun isIso4217(value: String): Boolean =
-        runCatching {
-            Currency.getInstance(value)
-        }.isSuccess
-
-    companion object {
-        private val CODE_REGEX = Regex("^[A-Z]{3}$")
-    }
 }

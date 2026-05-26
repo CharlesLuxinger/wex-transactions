@@ -16,6 +16,7 @@ import org.springframework.data.redis.core.ValueOperations
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import org.mockito.ArgumentMatchers.any
 
 class RedisExchangeRateCacheAdapterTest {
@@ -29,16 +30,17 @@ class RedisExchangeRateCacheAdapterTest {
 
     @Test
     fun `getRate returns exchange rate when key exists`() {
+        val rateDate = LocalDate.parse("2026-01-16")
         val keyValue =
             """
             {"rate":"5.10","sourceCurrency":"USD","targetCurrency":"BRL","retrievedAt":"2026-01-15T12:00:00Z"}
             """.trimIndent()
 
         `when`(stringRedisTemplate.opsForValue()).thenReturn(valueOperations)
-        val key = ExchangeRateCacheKeyBuilder.buildCacheKey(TargetCurrency("USD"), TargetCurrency("BRL"))
+        val key = ExchangeRateCacheKeyBuilder.buildCacheKey(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate)
         `when`(valueOperations.get(key)).thenReturn(keyValue)
 
-        val result = adapter.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))
+        val result = adapter.getRate(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate)
 
         assertEquals(BigDecimal("5.10"), result?.rate)
         assertEquals(TargetCurrency("USD"), result?.sourceCurrency)
@@ -47,17 +49,19 @@ class RedisExchangeRateCacheAdapterTest {
 
     @Test
     fun `getRate returns null on cache miss`() {
+        val rateDate = LocalDate.parse("2026-01-16")
         `when`(stringRedisTemplate.opsForValue()).thenReturn(valueOperations)
-        val key = ExchangeRateCacheKeyBuilder.buildCacheKey(TargetCurrency("USD"), TargetCurrency("BRL"))
+        val key = ExchangeRateCacheKeyBuilder.buildCacheKey(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate)
         `when`(valueOperations.get(key)).thenReturn(null)
 
-        val result = adapter.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))
+        val result = adapter.getRate(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate)
 
         assertNull(result)
     }
 
     @Test
     fun `saveRate sets value with 180 days ttl`() {
+        val rateDate = LocalDate.parse("2026-01-16")
         val rate =
             ExchangeRate(
                 rate = BigDecimal("5.25"),
@@ -68,7 +72,7 @@ class RedisExchangeRateCacheAdapterTest {
 
         `when`(stringRedisTemplate.opsForValue()).thenReturn(valueOperations)
 
-        adapter.saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), rate)
+        adapter.saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate, rate)
 
         val keyCaptor = ArgumentCaptor.forClass(String::class.java)
         val valueCaptor = ArgumentCaptor.forClass(String::class.java)
@@ -77,7 +81,7 @@ class RedisExchangeRateCacheAdapterTest {
         verify(valueOperations).set(keyCaptor.capture(), valueCaptor.capture(), ttlCaptor.capture())
 
         assertEquals(
-            ExchangeRateCacheKeyBuilder.buildCacheKey(TargetCurrency("USD"), TargetCurrency("BRL")),
+            ExchangeRateCacheKeyBuilder.buildCacheKey(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate),
             keyCaptor.value,
         )
         assertEquals(Duration.ofDays(180), ttlCaptor.value)
@@ -85,6 +89,7 @@ class RedisExchangeRateCacheAdapterTest {
 
     @Test
     fun `saveRate swallows serialization error`() {
+        val rateDate = LocalDate.parse("2026-01-16")
         val brokenMapper = mock(ObjectMapper::class.java)
         val safeAdapter = RedisExchangeRateCacheAdapter(stringRedisTemplate, brokenMapper)
         val rate =
@@ -97,8 +102,42 @@ class RedisExchangeRateCacheAdapterTest {
 
         `when`(brokenMapper.writeValueAsString(any())).thenThrow(RuntimeException("boom"))
 
-        safeAdapter.saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), rate)
+        safeAdapter.saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate, rate)
 
         verify(stringRedisTemplate, org.mockito.Mockito.never()).opsForValue()
+    }
+
+    @Test
+    fun `getLatestRate returns latest exchange rate for pair`() {
+        val prefix = ExchangeRateCacheKeyBuilder.buildPairPrefix(TargetCurrency("USD"), TargetCurrency("BRL"))
+        val newestKey = "${prefix}2026-01-16"
+        val olderKey = "${prefix}2026-01-15"
+        val newestValue =
+            """
+            {"rate":"5.10","sourceCurrency":"USD","targetCurrency":"BRL","retrievedAt":"2026-01-16T12:00:00Z"}
+            """.trimIndent()
+        val olderValue =
+            """
+            {"rate":"5.05","sourceCurrency":"USD","targetCurrency":"BRL","retrievedAt":"2026-01-15T12:00:00Z"}
+            """.trimIndent()
+
+        `when`(stringRedisTemplate.keys("${prefix}*")).thenReturn(setOf(olderKey, newestKey))
+        `when`(stringRedisTemplate.opsForValue()).thenReturn(valueOperations)
+        `when`(valueOperations.get(newestKey)).thenReturn(newestValue)
+        `when`(valueOperations.get(olderKey)).thenReturn(olderValue)
+
+        val result = adapter.getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))
+
+        assertEquals(BigDecimal("5.10"), result?.rate)
+    }
+
+    @Test
+    fun `getLatestRate returns null when pair has no keys`() {
+        val prefix = ExchangeRateCacheKeyBuilder.buildPairPrefix(TargetCurrency("USD"), TargetCurrency("BRL"))
+        `when`(stringRedisTemplate.keys("${prefix}*")).thenReturn(emptySet())
+
+        val result = adapter.getLatestRate(TargetCurrency("USD"), TargetCurrency("BRL"))
+
+        assertNull(result)
     }
 }

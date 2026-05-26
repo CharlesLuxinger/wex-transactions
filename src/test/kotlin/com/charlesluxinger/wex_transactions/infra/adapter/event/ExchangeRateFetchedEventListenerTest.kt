@@ -56,7 +56,12 @@ class ExchangeRateFetchedEventListenerTest {
                 retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
             )
 
-        verify(exchangeRateCachePort).saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), expectedRate)
+        verify(exchangeRateCachePort).saveRate(
+            TargetCurrency("USD"),
+            TargetCurrency("BRL"),
+            LocalDate.parse("2026-01-16"),
+            expectedRate,
+        )
         verify(streamOperations).acknowledge(streamProperties.group, record)
     }
 
@@ -104,11 +109,16 @@ class ExchangeRateFetchedEventListenerTest {
 
         doThrow(RuntimeException("cache failure"))
             .`when`(exchangeRateCachePort)
-            .saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), expectedRate)
+            .saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), LocalDate.parse("2026-01-16"), expectedRate)
 
         listener.onMessage(record)
 
-        verify(exchangeRateCachePort).saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), expectedRate)
+        verify(exchangeRateCachePort).saveRate(
+            TargetCurrency("USD"),
+            TargetCurrency("BRL"),
+            LocalDate.parse("2026-01-16"),
+            expectedRate,
+        )
         verify(streamOperations, never()).acknowledge(streamProperties.group, record)
     }
 

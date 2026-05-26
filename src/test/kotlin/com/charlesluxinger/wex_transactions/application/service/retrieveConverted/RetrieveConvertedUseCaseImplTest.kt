@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalDate
 
 class RetrieveConvertedUseCaseImplTest {
     private lateinit var listAppender: ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>
@@ -72,7 +73,13 @@ class RetrieveConvertedUseCaseImplTest {
         val cachedRate = sampleRate("5.10")
 
         `when`(purchaseRepositoryPort.findById(1L)).thenReturn(purchase)
-        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(cachedRate)
+        `when`(
+            exchangeRateCachePort.getRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(cachedRate)
 
         val response = useCase.retrieveConverted(query)
 
@@ -95,7 +102,13 @@ class RetrieveConvertedUseCaseImplTest {
         val fetchedRate = sampleRate("5.25")
 
         `when`(purchaseRepositoryPort.findById(2L)).thenReturn(purchase)
-        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(null)
+        `when`(
+            exchangeRateCachePort.getRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(null)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("USD"),
@@ -117,7 +130,12 @@ class RetrieveConvertedUseCaseImplTest {
                 rateDate = purchase.transactionDate.value.toLocalDate(),
             ),
         )
-        verify(exchangeRateCachePort, never()).saveRate(TargetCurrency("USD"), TargetCurrency("BRL"), fetchedRate)
+        verify(exchangeRateCachePort, never()).saveRate(
+            TargetCurrency("USD"),
+            TargetCurrency("BRL"),
+            purchase.transactionDate.value.toLocalDate(),
+            fetchedRate,
+        )
     }
 
     @Test
@@ -127,7 +145,13 @@ class RetrieveConvertedUseCaseImplTest {
         val fetchedRate = sampleRate("5.25")
 
         `when`(purchaseRepositoryPort.findById(4L)).thenReturn(purchase)
-        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(null)
+        `when`(
+            exchangeRateCachePort.getRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(null)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("USD"),
@@ -150,7 +174,11 @@ class RetrieveConvertedUseCaseImplTest {
 
         assertEquals(BigDecimal("5.25"), response.exchangeRateUsed)
         assertEquals(BigDecimal("525.00"), response.convertedAmount)
-        verify(exchangeRateCachePort).getRate(TargetCurrency("USD"), TargetCurrency("BRL"))
+        verify(exchangeRateCachePort).getRate(
+            TargetCurrency("USD"),
+            TargetCurrency("BRL"),
+            purchase.transactionDate.value.toLocalDate(),
+        )
         verify(exchangeRateClientPort).fetchNearestPriorRate(
             TargetCurrency("USD"),
             TargetCurrency("BRL"),
@@ -181,7 +209,13 @@ class RetrieveConvertedUseCaseImplTest {
         val purchase = samplePurchase(3L)
 
         `when`(purchaseRepositoryPort.findById(3L)).thenReturn(purchase)
-        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"))).thenReturn(null)
+        `when`(
+            exchangeRateCachePort.getRate(
+                TargetCurrency("USD"),
+                TargetCurrency("BRL"),
+                purchase.transactionDate.value.toLocalDate(),
+            ),
+        ).thenReturn(null)
         `when`(
             exchangeRateClientPort.fetchNearestPriorRate(
                 TargetCurrency("USD"),
@@ -215,4 +249,18 @@ class RetrieveConvertedUseCaseImplTest {
             targetCurrency = TargetCurrency("BRL"),
             retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
         )
+
+    @Test
+    fun `cache lookup passes transaction rate date`() {
+        val purchase = samplePurchase(5L)
+        val query = RetrieveConvertedQuery(purchaseId = 5L, targetCurrency = "BRL")
+        val rateDate = purchase.transactionDate.value.toLocalDate()
+
+        `when`(purchaseRepositoryPort.findById(5L)).thenReturn(purchase)
+        `when`(exchangeRateCachePort.getRate(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate)).thenReturn(sampleRate("5.10"))
+
+        useCase.retrieveConverted(query)
+
+        verify(exchangeRateCachePort).getRate(TargetCurrency("USD"), TargetCurrency("BRL"), rateDate)
+    }
 }

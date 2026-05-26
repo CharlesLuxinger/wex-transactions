@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Component
 import java.time.Duration
+import java.time.LocalDate
 
 @Component
 class RedisExchangeRateCacheAdapter(
@@ -18,11 +19,13 @@ class RedisExchangeRateCacheAdapter(
     override fun getRate(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
+        rateDate: LocalDate,
     ): ExchangeRate? {
         val key =
             ExchangeRateCacheKeyBuilder.buildCacheKey(
                 sourceCurrency,
                 targetCurrency,
+                rateDate,
             )
         return runCatching {
             stringRedisTemplate
@@ -41,12 +44,14 @@ class RedisExchangeRateCacheAdapter(
     override fun saveRate(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
+        rateDate: LocalDate,
         rate: ExchangeRate,
     ) {
         val key =
             ExchangeRateCacheKeyBuilder.buildCacheKey(
                 sourceCurrency,
                 targetCurrency,
+                rateDate,
             )
         runCatching {
             val value = objectMapper.writeValueAsString(ExchangeRateCacheValue.fromDomain(rate))
@@ -60,6 +65,31 @@ class RedisExchangeRateCacheAdapter(
                 exception.javaClass.simpleName,
             )
         }
+    }
+
+    override fun getLatestRate(
+        sourceCurrency: TargetCurrency,
+        targetCurrency: TargetCurrency,
+    ): ExchangeRate? {
+        val pairPrefix = ExchangeRateCacheKeyBuilder.buildPairPrefix(sourceCurrency, targetCurrency)
+        return runCatching {
+            val keys = stringRedisTemplate.keys("$pairPrefix*").sortedDescending()
+
+            keys
+                .asSequence()
+                .mapNotNull { key ->
+                    stringRedisTemplate
+                        .opsForValue()
+                        .get(key)
+                        ?.let { value -> objectMapper.readValue(value, ExchangeRateCacheValue::class.java).toDomain() }
+                }.firstOrNull()
+        }.onFailure { exception ->
+            logger.warn(
+                "Failed to read latest exchange rate from cache for keyPrefix={} due to {}",
+                pairPrefix,
+                exception.javaClass.simpleName,
+            )
+        }.getOrNull()
     }
 
     private companion object {

@@ -9,8 +9,6 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.LocalDate
-import java.util.Currency
-import java.util.Locale.US
 
 @Component
 class ExchangeRateTreasuryAdapter(
@@ -40,8 +38,12 @@ class ExchangeRateTreasuryAdapter(
                 pageSize = PAGE_SIZE,
             ).data
             ?.let { data ->
-                val matched = matchRate(targetCurrency, data) ?: return@let null
-                if (!matched.hasValidExchangeRate || !matched.hasValidRecordDate) return@let null
+                val matched =
+                    data.firstOrNull {
+                        it.hasValidExchangeRate &&
+                            it.hasValidRecordDate &&
+                            it.hasValidDescription
+                    } ?: return@let null
 
                 val parsedRate = matched.parsedRate ?: return@let null
                 if (matched.parsedRecordDateOrNull == null) return@let null
@@ -49,26 +51,10 @@ class ExchangeRateTreasuryAdapter(
                 ExchangeRate(
                     parsedRate,
                     sourceCurrency,
-                    targetCurrency,
+                    TargetCurrency(matched.countryCurrencyDesc),
                     matched.retrievedAt,
                 )
             }
-    }
-
-    private fun matchRate(
-        target: TargetCurrency,
-        records: List<TreasuryRateRecord>,
-    ): TreasuryRateRecord? {
-        val isoCurrency = runCatching { Currency.getInstance(target.code) }.getOrNull() ?: return null
-        val displayName = isoCurrency.getDisplayName(US).lowercase()
-
-        return records.firstOrNull { record ->
-            if (!record.hasValidDescription) return@firstOrNull false
-            val desc = record.countryCurrencyDesc.lowercase()
-            val currencyPart = desc.substringAfter("-")
-            displayName.contains(currencyPart) ||
-                desc.contains(displayName.split(" ").lastOrNull() ?: "")
-        }
     }
 
     private fun fallback(

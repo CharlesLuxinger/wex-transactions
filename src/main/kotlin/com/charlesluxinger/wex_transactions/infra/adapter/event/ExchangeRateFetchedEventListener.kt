@@ -58,6 +58,7 @@ class ExchangeRateFetchedEventListener(
                 exchangeRateCachePort.saveRate(
                     sourceCurrency = TargetCurrency(event.sourceCurrency),
                     targetCurrency = TargetCurrency(event.targetCurrency),
+                    rateDate = event.rateDate,
                     rate = rate,
                 )
             }.onSuccess {
