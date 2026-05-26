@@ -4,15 +4,6 @@ import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-/**
- * Architecture tests for use-case ownership enforcement.
- *
- * Governance rule: AGENTS.md Section "Governance Rules" - Rule 3
- * - Use case implementations (`*UseCaseImpl`) must reside in Application layer
- * - Use cases coordinate domain objects but don't contain core business rules
- *
- * This ensures proper layer separation and DDD boundary enforcement.
- */
 class UseCaseOwnershipTest : ArchitectureTest() {
     @Test
     fun `use case implementations must be in application layer`() {

@@ -10,10 +10,6 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.stereotype.Component
 import java.util.UUID
 
-/**
- * Filter to extract and validate idempotency key from X-Idempotency-Key header.
- * Makes the parsed key available via request attributes for controllers.
- */
 @Component
 class IdempotencyKeyFilter : Filter {
     companion object {
