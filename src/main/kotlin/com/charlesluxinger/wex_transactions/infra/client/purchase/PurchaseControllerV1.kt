@@ -31,7 +31,6 @@ class PurchaseControllerV1(
                     transactionAmount = request.transactionAmount,
                     transactionCurrency = request.transactionCurrency,
                     transactionDate = request.transactionDate,
-                    targetCurrency = request.targetCurrency,
                 ),
             )
 
@@ -41,9 +40,6 @@ class PurchaseControllerV1(
             transactionAmount = result.transactionAmount,
             transactionCurrency = result.transactionCurrency.code,
             transactionDate = result.transactionDate.toCanonicalString(),
-            targetCurrency = result.targetCurrency.code,
-            exchangeRate = result.exchangeRate.rate,
-            convertedAmount = result.convertedAmount,
             createdAt = result.createdAt,
         )
     }

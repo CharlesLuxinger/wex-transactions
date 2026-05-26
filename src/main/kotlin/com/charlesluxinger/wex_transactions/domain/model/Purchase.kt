@@ -9,9 +9,6 @@ class Purchase(
     val transactionAmount: BigDecimal,
     val transactionCurrency: TargetCurrency,
     val transactionDate: TransactionDate,
-    val targetCurrency: TargetCurrency,
-    val exchangeRate: ExchangeRate,
-    val convertedAmount: BigDecimal,
     val createdAt: Instant,
 ) {
     init {
@@ -24,7 +21,6 @@ class Purchase(
         require(
             transactionAmount.stripTrailingZeros().scale() <= 2,
         ) { "Transaction amount must have at most 2 decimal places" }
-        require(convertedAmount >= BigDecimal.ZERO) { "Converted amount must be zero or positive" }
     }
 
     override fun equals(other: Any?): Boolean = this === other || (other is Purchase && id == other.id)

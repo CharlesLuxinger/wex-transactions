@@ -1,6 +1,8 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.external.treasury
 
+import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
+import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCachePort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -14,12 +16,16 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDate
 
 @ExtendWith(MockitoExtension::class)
 class ExchangeRateTreasuryAdapterTest {
     @Mock
     private lateinit var treasuryFeignClient: TreasuryFeignClient
+
+    @Mock
+    private lateinit var exchangeRateCachePort: ExchangeRateCachePort
 
     private lateinit var adapter: ExchangeRateTreasuryAdapter
 
@@ -30,7 +36,7 @@ class ExchangeRateTreasuryAdapterTest {
 
     @BeforeEach
     fun setUp() {
-        adapter = ExchangeRateTreasuryAdapter(treasuryFeignClient)
+        adapter = ExchangeRateTreasuryAdapter(treasuryFeignClient, exchangeRateCachePort)
     }
 
     @Test
@@ -326,5 +332,35 @@ class ExchangeRateTreasuryAdapterTest {
 
         assertThat(result).isNotNull
         assertThat(result!!.targetCurrency.code).isEqualTo("Brazil-Real")
+    }
+
+    @Test
+    @DisplayName("Circuit open with stale cache available returns cached rate")
+    fun `circuit open with stale cache available returns cached rate`() {
+        val staleRate =
+            ExchangeRate(
+                rate = BigDecimal("5.00"),
+                sourceCurrency = usd,
+                targetCurrency = brazilReal,
+                retrievedAt = Instant.parse("2026-05-01T00:00:00Z"),
+            )
+
+        `when`(exchangeRateCachePort.getLatestRate(usd, brazilReal)).thenReturn(staleRate)
+
+        val result = adapter.fallback(usd, brazilReal, rateDate, RuntimeException("Treasury unavailable"))
+
+        assertThat(result).isNotNull
+        assertThat(result!!.rate).isEqualByComparingTo(BigDecimal("5.00"))
+        assertThat(result.retrievedAt).isEqualTo(Instant.parse("2026-05-01T00:00:00Z"))
+    }
+
+    @Test
+    @DisplayName("Circuit open with no cache available throws exception")
+    fun `circuit open with no cache available throws exception`() {
+        `when`(exchangeRateCachePort.getLatestRate(usd, brazilReal)).thenReturn(null)
+
+        org.junit.jupiter.api.assertThrows<com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException> {
+            adapter.fallback(usd, brazilReal, rateDate, RuntimeException("Treasury unavailable"))
+        }
     }
 }

@@ -30,12 +30,6 @@ class PurchaseJpaEntity(
     var transactionCurrency: String,
     @Column(name = "transaction_date", nullable = false)
     var transactionDate: Instant,
-    @Column(name = "target_currency", nullable = false, length = 50)
-    var targetCurrency: String,
-    @Column(name = "exchange_rate", nullable = false, precision = 18, scale = 2)
-    var exchangeRate: BigDecimal,
-    @Column(name = "converted_amount", nullable = false, precision = 18, scale = 2)
-    var convertedAmount: BigDecimal,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,
 ) {
@@ -46,15 +40,6 @@ class PurchaseJpaEntity(
             transactionAmount = transactionAmount,
             transactionCurrency = TargetCurrency(transactionCurrency),
             transactionDate = TransactionDate(LocalDateTime.ofInstant(transactionDate, ZoneOffset.UTC)),
-            targetCurrency = TargetCurrency(targetCurrency),
-            exchangeRate =
-                ExchangeRate(
-                    rate = exchangeRate,
-                    sourceCurrency = TargetCurrency(transactionCurrency),
-                    targetCurrency = TargetCurrency(targetCurrency),
-                    retrievedAt = createdAt,
-                ),
-            convertedAmount = convertedAmount,
             createdAt = createdAt,
         )
 
@@ -68,9 +53,6 @@ class PurchaseJpaEntity(
                     purchase.transactionDate.value
                         .atOffset(ZoneOffset.UTC)
                         .toInstant(),
-                targetCurrency = purchase.targetCurrency.code,
-                exchangeRate = purchase.exchangeRate.rate,
-                convertedAmount = purchase.convertedAmount,
                 createdAt = purchase.createdAt,
             )
     }

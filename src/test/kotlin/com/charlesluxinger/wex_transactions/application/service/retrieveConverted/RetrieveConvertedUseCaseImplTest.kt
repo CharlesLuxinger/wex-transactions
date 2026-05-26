@@ -322,9 +322,6 @@ class RetrieveConvertedUseCaseImplTest {
             transactionAmount = BigDecimal("100.00"),
             transactionCurrency = TargetCurrency("United-States-Dollar"),
             transactionDate = TransactionDate("2026-01-16T10:00:00Z"),
-            targetCurrency = TargetCurrency("Brazil-Real"),
-            exchangeRate = sampleRate("5.00"),
-            convertedAmount = BigDecimal("500.00"),
             createdAt = Instant.parse("2026-01-16T10:00:00Z"),
         )
 

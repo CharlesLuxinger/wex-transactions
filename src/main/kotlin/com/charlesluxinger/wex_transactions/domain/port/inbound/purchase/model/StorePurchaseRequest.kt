@@ -18,7 +18,5 @@ data class StorePurchaseRequest(
     @field:Pattern(regexp = "^United-States-Dollar$", message = "Transaction currency must be United-States-Dollar")
     val transactionCurrency: String,
     @field:NotBlank(message = "Transaction date must not be blank")
-    val transactionDate: String,
-    @field:NotBlank(message = "Target currency must not be blank")
-    val targetCurrency: String,
+    val transactionDate: String
 )

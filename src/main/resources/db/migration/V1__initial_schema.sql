@@ -4,9 +4,6 @@ CREATE TABLE purchases (
     transaction_amount DECIMAL(18,2) NOT NULL,
     transaction_currency VARCHAR(50) NOT NULL,
     transaction_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    target_currency VARCHAR(50) NOT NULL,
-    exchange_rate DECIMAL(18,2) NOT NULL,
-    converted_amount DECIMAL(18,2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 

@@ -27,9 +27,6 @@ class StorePurchaseUseCaseImplTest {
     @Mock
     private lateinit var purchaseRepositoryPort: PurchaseRepositoryPort
 
-    @Mock
-    private lateinit var exchangeRateClientPort: ExchangeRateClientPort
-
     private val usd = TargetCurrency("United-States-Dollar")
     private val brl = TargetCurrency("Brazil-Real")
 
@@ -46,186 +43,119 @@ class StorePurchaseUseCaseImplTest {
 
                 override fun findById(id: Long): Purchase? = null
             }
-        val useCase = StorePurchaseUseCaseImpl(fakePurchaseRepositoryPort, exchangeRateClientPort)
+        val useCase = StorePurchaseUseCaseImpl(fakePurchaseRepositoryPort)
         val command =
             StorePurchaseCommand(
                 description = "  New TV  ",
                 transactionAmount = BigDecimal("10.005"),
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "Brazil-Real",
+
             )
-        val rate = sampleRate("5.678")
-
-        `when`(exchangeRateClientPort.fetchRate(usd, brl)).thenReturn(rate)
-
         val result = useCase.storePurchase(command)
 
-        verify(exchangeRateClientPort, times(1)).fetchRate(usd, brl)
         val savedPurchase = checkNotNull(persistedPurchase)
         assertEquals("New TV", savedPurchase.description)
         assertEquals(BigDecimal("10.01"), savedPurchase.transactionAmount)
-        assertEquals(BigDecimal("5.68"), savedPurchase.exchangeRate.rate)
-        assertEquals(BigDecimal("56.86"), savedPurchase.convertedAmount)
         assertEquals("United-States-Dollar", savedPurchase.transactionCurrency.code)
-        assertEquals("Brazil-Real", savedPurchase.targetCurrency.code)
         assertEquals(TransactionDate("2026-05-23T12:00:00Z"), savedPurchase.transactionDate)
-        assertEquals(savedPurchase.convertedAmount, result.convertedAmount)
     }
 
     @Test
     @DisplayName("Blank description throws and does not call ports")
     fun `blank description throws exception`() {
-        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort, exchangeRateClientPort)
+        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort)
         val command =
             StorePurchaseCommand(
                 description = "   ",
                 transactionAmount = BigDecimal("10.00"),
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
-        verifyNoInteractions(exchangeRateClientPort)
         verifyNoInteractions(purchaseRepositoryPort)
     }
 
     @Test
     @DisplayName("Description over max length throws and does not call ports")
     fun `description exceeding max length throws exception`() {
-        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort, exchangeRateClientPort)
+        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort)
         val command =
             StorePurchaseCommand(
                 description = "x".repeat(51),
                 transactionAmount = BigDecimal("10.00"),
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
-        verifyNoInteractions(exchangeRateClientPort)
         verifyNoInteractions(purchaseRepositoryPort)
     }
 
     @Test
     @DisplayName("Non-positive amount throws and does not call ports")
     fun `non positive amount throws exception`() {
-        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort, exchangeRateClientPort)
+        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort)
         val command =
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal.ZERO,
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
-        verifyNoInteractions(exchangeRateClientPort)
         verifyNoInteractions(purchaseRepositoryPort)
     }
 
     @Test
     @DisplayName("Only United-States-Dollar source currency is accepted")
     fun `non usd source currency throws exception`() {
-        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort, exchangeRateClientPort)
+        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort)
         val command =
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal("10.00"),
                 transactionCurrency = "Brazil-Real",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "Brazil-Real",
             )
 
         val exception = assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
 
         assertEquals("Only United-States-Dollar purchases are supported", exception.message)
-        verifyNoInteractions(exchangeRateClientPort)
         verifyNoInteractions(purchaseRepositoryPort)
     }
 
     @Test
     @DisplayName("Invalid source currency token throws domain exception")
     fun `invalid source currency token throws exception`() {
-        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort, exchangeRateClientPort)
+        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort)
         val command =
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal("10.00"),
                 transactionCurrency = "",
                 transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(InvalidCurrencyException::class.java) { useCase.storePurchase(command) }
-        verifyNoInteractions(exchangeRateClientPort)
-        verifyNoInteractions(purchaseRepositoryPort)
-    }
-
-    @Test
-    @DisplayName("Invalid target currency token throws domain exception")
-    fun `invalid target currency token throws exception`() {
-        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort, exchangeRateClientPort)
-        val command =
-            StorePurchaseCommand(
-                description = "Valid description",
-                transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = "United-States-Dollar",
-                transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "",
-            )
-
-        assertThrows(InvalidCurrencyException::class.java) { useCase.storePurchase(command) }
-        verifyNoInteractions(exchangeRateClientPort)
         verifyNoInteractions(purchaseRepositoryPort)
     }
 
     @Test
     @DisplayName("Invalid transaction date format throws")
     fun `invalid transaction date throws exception`() {
-        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort, exchangeRateClientPort)
+        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort)
         val command =
             StorePurchaseCommand(
                 description = "Valid description",
                 transactionAmount = BigDecimal("10.00"),
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = "23-05-2026 12:00:00",
-                targetCurrency = "Brazil-Real",
             )
 
         assertThrows(IllegalArgumentException::class.java) { useCase.storePurchase(command) }
-        verifyNoInteractions(exchangeRateClientPort)
         verifyNoInteractions(purchaseRepositoryPort)
     }
-
-    @Test
-    @DisplayName("Rate client failure does not persist purchase")
-    fun `rate client failure does not save purchase`() {
-        val useCase = StorePurchaseUseCaseImpl(purchaseRepositoryPort, exchangeRateClientPort)
-        val command =
-            StorePurchaseCommand(
-                description = "Valid description",
-                transactionAmount = BigDecimal("10.00"),
-                transactionCurrency = "United-States-Dollar",
-                transactionDate = "2026-05-23T12:00:00Z",
-                targetCurrency = "Brazil-Real",
-            )
-
-        `when`(exchangeRateClientPort.fetchRate(usd, brl)).thenThrow(RuntimeException("Treasury down"))
-
-        assertThrows(RuntimeException::class.java) { useCase.storePurchase(command) }
-        verify(exchangeRateClientPort, times(1)).fetchRate(usd, brl)
-        verifyNoInteractions(purchaseRepositoryPort)
-    }
-
-    private fun sampleRate(rate: String): ExchangeRate =
-        ExchangeRate(
-            rate = BigDecimal(rate),
-            sourceCurrency = TargetCurrency("United-States-Dollar"),
-            targetCurrency = TargetCurrency("Brazil-Real"),
-            retrievedAt = Instant.parse("2026-01-15T12:00:00Z"),
-        )
 }

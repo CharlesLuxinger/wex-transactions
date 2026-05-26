@@ -30,9 +30,6 @@ class PurchaseRepositoryJPAAdapterTest {
                 transactionAmount = BigDecimal("100.00"),
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = now,
-                targetCurrency = "Brazil-Real",
-                exchangeRate = BigDecimal("5.50"),
-                convertedAmount = BigDecimal("550.00"),
                 createdAt = now,
             )
         `when`(springDataRepository.findById(1L)).thenReturn(Optional.of(entity))
@@ -65,15 +62,6 @@ class PurchaseRepositoryJPAAdapterTest {
                 transactionAmount = BigDecimal("100.00"),
                 transactionCurrency = TargetCurrency("United-States-Dollar"),
                 transactionDate = TransactionDate("2026-01-10T15:30:45Z"),
-                targetCurrency = TargetCurrency("Brazil-Real"),
-                exchangeRate =
-                    ExchangeRate(
-                        rate = BigDecimal("5.50"),
-                        sourceCurrency = TargetCurrency("United-States-Dollar"),
-                        targetCurrency = TargetCurrency("Brazil-Real"),
-                        retrievedAt = now,
-                    ),
-                convertedAmount = BigDecimal("550.00"),
                 createdAt = now,
             )
 
@@ -84,9 +72,6 @@ class PurchaseRepositoryJPAAdapterTest {
                 transactionAmount = BigDecimal("100.00"),
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = now,
-                targetCurrency = "Brazil-Real",
-                exchangeRate = BigDecimal("5.50"),
-                convertedAmount = BigDecimal("550.00"),
                 createdAt = now,
             )
 

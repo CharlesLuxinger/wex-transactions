@@ -3,6 +3,7 @@ package com.charlesluxinger.wex_transactions.infra.adapter.external.treasury
 import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
+import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCachePort
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateClientPort
 import io.github.resilience4j.bulkhead.annotation.Bulkhead
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
@@ -14,14 +15,8 @@ import java.time.LocalDate
 @Component
 class ExchangeRateTreasuryAdapter(
     private val treasuryFeignClient: TreasuryFeignClient,
+    private val exchangeRateCachePort: ExchangeRateCachePort,
 ) : ExchangeRateClientPort {
-    override fun fetchRate(
-        from: TargetCurrency,
-        to: TargetCurrency,
-    ): ExchangeRate =
-        fetchNearestPriorRate(from, to, LocalDate.now())
-            ?: throw IllegalStateException("No exchange rate available for $from -> $to")
-
     @CircuitBreaker(name = TREASURY_RATES_RESILIENCE, fallbackMethod = "fallback")
     @Bulkhead(name = TREASURY_RATES_RESILIENCE, type = Bulkhead.Type.SEMAPHORE)
     @RateLimiter(name = TREASURY_API_RATE_LIMITER)
@@ -59,7 +54,7 @@ class ExchangeRateTreasuryAdapter(
             }
     }
 
-    private fun fallback(
+    internal fun fallback(
         sourceCurrency: TargetCurrency,
         targetCurrency: TargetCurrency,
         rateDate: LocalDate,
@@ -72,6 +67,23 @@ class ExchangeRateTreasuryAdapter(
             rateDate,
             throwable,
         )
+
+        val latestCachedRate =
+            exchangeRateCachePort.getLatestRate(
+                sourceCurrency = sourceCurrency,
+                targetCurrency = targetCurrency,
+            )
+
+        if (latestCachedRate != null) {
+            logger.warn(
+                "[ADAPTER][FALLBACK_CACHE] sourceCurrency={} targetCurrency={} cachedRetrievedAt={}",
+                sourceCurrency.code,
+                targetCurrency.code,
+                latestCachedRate.retrievedAt,
+            )
+            return latestCachedRate
+        }
+
         throw RateUnavailableException(sourceCurrency.code, targetCurrency.code)
     }
 

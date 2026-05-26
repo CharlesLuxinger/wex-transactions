@@ -46,9 +46,6 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .body("transactionAmount", hamcrestEqualTo(15.50f))
             .body("transactionCurrency", hamcrestEqualTo("United-States-Dollar"))
             .body("transactionDate", hamcrestEqualTo("2026-05-23T12:00:00Z"))
-            .body("targetCurrency", hamcrestEqualTo("Brazil-Real"))
-            .body("exchangeRate", hamcrestEqualTo(1.0f))
-            .body("convertedAmount", hamcrestEqualTo(15.50f))
     }
 
     @Test
@@ -77,9 +74,6 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
                 .body("transactionAmount", hamcrestEqualTo(15.50f))
                 .body("transactionCurrency", hamcrestEqualTo("United-States-Dollar"))
                 .body("transactionDate", hamcrestEqualTo("2026-05-23T12:00:00Z"))
-                .body("targetCurrency", hamcrestEqualTo("Brazil-Real"))
-                .body("exchangeRate", hamcrestEqualTo(1.0f))
-                .body("convertedAmount", hamcrestEqualTo(15.50f))
                 .extract()
                 .path<Int>("id")
                 .toLong()
@@ -96,9 +90,6 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
                 .body("transactionAmount", hamcrestEqualTo(15.50f))
                 .body("transactionCurrency", hamcrestEqualTo("United-States-Dollar"))
                 .body("transactionDate", hamcrestEqualTo("2026-05-23T12:00:00Z"))
-                .body("targetCurrency", hamcrestEqualTo("Brazil-Real"))
-                .body("exchangeRate", hamcrestEqualTo(1.0f))
-                .body("convertedAmount", hamcrestEqualTo(15.50f))
                 .extract()
                 .path<Int>("id")
                 .toLong()
@@ -197,29 +188,6 @@ class PurchaseControllerV1Test : AbstractRestApiIntegrationTest() {
             .statusCode(400)
             .body("title", hamcrestEqualTo("Bad Request"))
             .body("detail", hamcrestEqualTo("Invalid ISO-8601 transaction date format"))
-    }
-
-    @Test
-    @DisplayName("Should fail when currency is invalid")
-    fun `should fail when currency is invalid`() {
-        val payload =
-            mapOf(
-                "description" to "Book",
-                "transactionAmount" to 10.00,
-                "transactionCurrency" to "United-States-Dollar",
-                "transactionDate" to "2026-05-23T12:00:00Z",
-                "targetCurrency" to "",
-            )
-
-        givenJson()
-            .body(payload)
-            .`when`()
-            .post("/api/v1/purchases")
-            .then()
-            .statusCode(400)
-            .body("title", hamcrestEqualTo("Bad Request"))
-            .body("detail", hamcrestEqualTo("Target currency must not be blank"))
-            .body("errors.message", hasItem("Target currency must not be blank"))
     }
 
     @Test

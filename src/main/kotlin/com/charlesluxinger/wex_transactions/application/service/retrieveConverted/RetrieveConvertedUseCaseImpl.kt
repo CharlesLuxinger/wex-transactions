@@ -4,7 +4,6 @@ import com.charlesluxinger.wex_transactions.domain.model.ExchangeRate
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
-import com.charlesluxinger.wex_transactions.domain.model.toMonetaryScale
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.RetrieveConvertedQueryPort
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedQuery
 import com.charlesluxinger.wex_transactions.domain.port.inbound.retrieveConverted.model.RetrieveConvertedResponse
@@ -13,6 +12,7 @@ import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateCli
 import com.charlesluxinger.wex_transactions.domain.port.outbound.ExchangeRateEventPort
 import com.charlesluxinger.wex_transactions.domain.event.ExchangeRateFetchedEvent
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
+import com.charlesluxinger.wex_transactions.domain.model.toMonetaryScale
 import com.charlesluxinger.wex_transactions.domain.port.outbound.PurchaseRepositoryPort
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
