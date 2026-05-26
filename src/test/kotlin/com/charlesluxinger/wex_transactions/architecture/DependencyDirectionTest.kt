@@ -5,16 +5,6 @@ import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-/**
- * Architecture tests for strict dependency direction.
- *
- * Governance rule: AGENTS.md Section "Governance Rules" - Rule 1
- * - `domain..` must not depend on `application..` or `infra..`
- * - `application..` must not depend on `infra..`
- *
- * This enforces the hexagonal architecture principle: dependencies point inward.
- * Domain is the core, application orchestrates, infra implements adapters.
- */
 class DependencyDirectionTest : ArchitectureTest() {
     @Test
     fun `domain must not depend on application`() {

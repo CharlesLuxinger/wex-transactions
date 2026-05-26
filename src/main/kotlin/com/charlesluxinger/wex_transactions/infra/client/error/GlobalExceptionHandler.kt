@@ -1,5 +1,6 @@
 package com.charlesluxinger.wex_transactions.infra.client.error
 
+import com.charlesluxinger.wex_transactions.domain.model.IdempotencyKeyConflictException
 import com.charlesluxinger.wex_transactions.domain.model.InvalidCurrencyException
 import com.charlesluxinger.wex_transactions.domain.model.PurchaseNotFoundException
 import com.charlesluxinger.wex_transactions.domain.model.RateUnavailableException
@@ -9,6 +10,7 @@ import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.MissingRequestHeaderException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -40,6 +42,7 @@ private fun mapFeignException(ex: FeignException): Triple<HttpStatus, String, St
     }
 
 @RestControllerAdvice
+@Suppress("TooManyFunctions")
 class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException::class)
     fun handleConstraintViolationException(ex: ConstraintViolationException): ResponseEntity<ProblemDetail> {
@@ -68,6 +71,18 @@ class GlobalExceptionHandler {
             ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST,
                 ex.message ?: "Invalid request parameter",
+            )
+        problemDetail.title = "Bad Request"
+        problemDetail.type = URI.create("about:blank")
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail)
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException::class)
+    fun handleMissingRequestHeaderException(ex: MissingRequestHeaderException): ResponseEntity<ProblemDetail> {
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "Missing required header: ${ex.headerName}",
             )
         problemDetail.title = "Bad Request"
         problemDetail.type = URI.create("about:blank")
@@ -240,5 +255,17 @@ class GlobalExceptionHandler {
         problemDetail.title = "Too Many Requests"
         problemDetail.type = URI.create("about:blank")
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(problemDetail)
+    }
+
+    @ExceptionHandler(IdempotencyKeyConflictException::class)
+    fun handleIdempotencyKeyConflictException(ex: IdempotencyKeyConflictException): ResponseEntity<ProblemDetail> {
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                ex.message ?: "Idempotency key conflict detected",
+            )
+        problemDetail.title = "Conflict"
+        problemDetail.type = URI.create("about:blank")
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail)
     }
 }

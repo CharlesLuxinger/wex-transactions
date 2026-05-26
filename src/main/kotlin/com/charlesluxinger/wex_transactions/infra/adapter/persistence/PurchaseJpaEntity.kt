@@ -13,6 +13,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.util.UUID
 
 @Entity
 @Table(name = "purchases")
@@ -31,6 +32,8 @@ class PurchaseJpaEntity(
     var transactionDate: Instant,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,
+    @Column(name = "idempotency_key", nullable = false, unique = true)
+    var idempotencyKey: UUID,
 ) {
     fun toDomain(): Purchase =
         Purchase(
@@ -43,7 +46,10 @@ class PurchaseJpaEntity(
         )
 
     companion object {
-        fun fromDomain(purchase: Purchase): PurchaseJpaEntity =
+        fun fromDomainWithIdempotencyKey(
+            purchase: Purchase,
+            idempotencyKey: UUID,
+        ): PurchaseJpaEntity =
             PurchaseJpaEntity(
                 description = purchase.description,
                 transactionAmount = purchase.transactionAmount,
@@ -53,6 +59,7 @@ class PurchaseJpaEntity(
                         .atOffset(ZoneOffset.UTC)
                         .toInstant(),
                 createdAt = purchase.createdAt,
+                idempotencyKey = idempotencyKey,
             )
     }
 }

@@ -102,7 +102,7 @@ class DomainExceptionTest {
     fun `sealed class should prevent external subclasses`() {
         val sealedSubclasses = DomainException::class.sealedSubclasses
 
-        assertEquals(4, sealedSubclasses.size)
+        assertEquals(5, sealedSubclasses.size)
         assertTrue(sealedSubclasses.all { it.isSubclassOf(DomainException::class) })
     }
 }

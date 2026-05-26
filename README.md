@@ -63,6 +63,18 @@ docker compose down -v
 ./gradlew test
 ```
 
+## Idempotency
+
+All purchase requests **must include** the `X-Idempotency-Key` header with a valid UUID.
+
+### Why Idempotency Keys Are Required
+
+1. **Network Resilience:** Automatic retry safety without risk of duplicate charges
+2. **Client Guarantees:** Same request (same key) always returns same result, preventing double-booking
+3. **Distributed Systems:** Safe operation across load balancers, proxies, and multiple instances
+4. **Audit Trail:** Every transaction is tied to a unique request identifier for compliance and debugging
+5. **Production-Grade:** Industry standard for payment APIs (Stripe, PayPal, AWS Payments)
+
 ## Troubleshooting
 - **Port conflicts (8080/5432):** Stop the process using the port, then rerun `docker compose up -d`.
 - **Stale volumes/state issues:** Run `docker compose down -v` and start again.

@@ -1,5 +1,6 @@
 package com.charlesluxinger.wex_transactions.infra.adapter.persistence
 
+import com.charlesluxinger.wex_transactions.domain.model.IdempotencyKey
 import com.charlesluxinger.wex_transactions.domain.model.Purchase
 import com.charlesluxinger.wex_transactions.domain.model.TargetCurrency
 import com.charlesluxinger.wex_transactions.domain.model.TransactionDate
@@ -13,6 +14,7 @@ import org.mockito.Mockito.`when`
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.Optional
+import java.util.UUID
 
 class PurchaseRepositoryJPAAdapterTest {
     private val springDataRepository = mock(PurchaseSpringDataRepository::class.java)
@@ -30,6 +32,7 @@ class PurchaseRepositoryJPAAdapterTest {
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = now,
                 createdAt = now,
+                idempotencyKey = UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
             )
         `when`(springDataRepository.findById(1L)).thenReturn(Optional.of(entity))
 
@@ -51,8 +54,8 @@ class PurchaseRepositoryJPAAdapterTest {
     }
 
     @Test
-    @DisplayName("save persists and returns purchase")
-    fun `save should persist and return purchase`() {
+    @DisplayName("saveWithIdempotencyKey persists and returns purchase")
+    fun `saveWithIdempotencyKey should persist and return purchase`() {
         val now = Instant.now()
         val purchase =
             Purchase(
@@ -64,6 +67,8 @@ class PurchaseRepositoryJPAAdapterTest {
                 createdAt = now,
             )
 
+        val idempotencyKey = IdempotencyKey(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+
         val savedEntity =
             PurchaseJpaEntity(
                 id = 1L,
@@ -72,11 +77,12 @@ class PurchaseRepositoryJPAAdapterTest {
                 transactionCurrency = "United-States-Dollar",
                 transactionDate = now,
                 createdAt = now,
+                idempotencyKey = idempotencyKey.value,
             )
 
         `when`(springDataRepository.save(any<PurchaseJpaEntity>())).thenReturn(savedEntity)
 
-        val result = adapter.save(purchase)
+        val result = adapter.save(purchase, idempotencyKey)
 
         assertThat(result.id).isEqualTo(1L)
         assertThat(result.description).isEqualTo("Test purchase")
