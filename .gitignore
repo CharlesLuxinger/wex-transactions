@@ -45,12 +45,7 @@ graphify-out/cache/
 
 # Test logs and artifacts
 *.log
-test-output.txt
-full-test.log
-fulltest.log
-treasury-test.log
-hs_err_*.log
-replay_*.log
+*.txt
 
 # Build automation artifacts
 .sisyphus/ralph-loop.local.md
